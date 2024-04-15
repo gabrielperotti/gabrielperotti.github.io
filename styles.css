@@ -20,21 +20,15 @@ header {
   color: white;
   padding: 20px 0;
   text-align: center;
-  position: fixed;
   width: 100%;
   top: 0;
   left: 0;
-  transition: padding 0.3s;
   z-index: 1000;
-}
-
-header.small {
-  padding: 10px 0;
+  position: fixed;
 }
 
 header button {
   position: absolute;
-  top: 20px;
   right: 20px;
   padding: 10px;
   background-color: #333;
@@ -44,16 +38,23 @@ header button {
   transition: top 0.3s;
 }
 
-header.small button {
-  top: 5px;
+nav {
+  position: fixed;
+  width: 100%;
+  top: 80px;
+  /* Height of the header */
+  left: 0;
+  background-color: #007BFF;
+  z-index: 999;
+  opacity: 0.95;
+  transition: top 0.2s;
 }
 
 nav ul {
   list-style-type: none;
   padding: 0;
   text-align: center;
-  margin-top: 60px;
-  /* Espacio para el header cuando se achica */
+  margin: 0;
 }
 
 nav ul li {
@@ -64,16 +65,17 @@ nav ul li {
 nav a {
   color: white;
   text-decoration: none;
+  padding: 10px 20px;
+  display: inline-block;
 }
 
 main {
   padding-top: 140px;
-  /* Espacio para el header */
+  /* Height of header and nav combined */
 }
 
 section {
   min-height: 100vh;
-  /* Altura mínima de cada sección */
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -97,4 +99,17 @@ footer {
 .night footer {
   background-color: #222;
   color: #ddd;
+}
+
+/* Responsive adjustments */
+@media (max-width: 600px) {
+  nav ul li {
+    display: block;
+    text-align: center;
+  }
+
+  header button {
+    padding: 5px;
+    font-size: 0.8em;
+  }
 }

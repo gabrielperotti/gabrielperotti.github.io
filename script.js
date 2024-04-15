@@ -2,11 +2,11 @@ let isNightMode = false;
 let isEnglish = false;
 
 window.addEventListener('scroll', function () {
-  const header = document.querySelector('header');
-  if (window.scrollY > 50) {
-    header.classList.add('small');
+  const nav = document.querySelector('nav');
+  if (window.scrollY > 80) {
+    nav.style.top = '0'; // Move nav to the top when scrolling down
   } else {
-    header.classList.remove('small');
+    nav.style.top = '80px'; // Reset when at the top of the page
   }
 });
 
