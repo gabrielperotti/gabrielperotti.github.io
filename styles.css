@@ -1,9 +1,61 @@
 body {
-  font-family: Arial, sans-serif;
-  padding: 20px;
-  background-color: white;
-  color: black;
+  font-family: 'Arial', sans-serif;
+  margin: 0;
+  padding: 0;
+  background-color: #f4f4f4;
+  color: #333;
   transition: background-color 0.3s, color 0.3s;
+}
+
+.container {
+  width: 90%;
+  max-width: 1200px;
+  margin: auto;
+  overflow: hidden;
+}
+
+header,
+nav,
+footer {
+  background-color: #007BFF;
+  color: white;
+  padding: 1em 0;
+  text-align: center;
+}
+
+header button {
+  float: right;
+  margin: 10px;
+  padding: 10px;
+  background-color: #333;
+  color: white;
+  border: none;
+  cursor: pointer;
+}
+
+nav ul {
+  list-style-type: none;
+  padding: 0;
+}
+
+nav ul li {
+  display: inline;
+  margin-right: 20px;
+}
+
+nav a {
+  color: white;
+  text-decoration: none;
+}
+
+main {
+  padding: 20px 0;
+}
+
+footer {
+  text-align: center;
+  padding: 10px 0;
+  font-size: 0.8em;
 }
 
 .night {
@@ -11,17 +63,9 @@ body {
   color: #ccc;
 }
 
-nav ul {
-  list-style: none;
-  padding: 0;
-}
-
-nav ul li {
-  display: inline;
-  margin-right: 10px;
-}
-
-footer {
-  text-align: center;
-  font-size: 0.8em;
+.night header,
+.night nav,
+.night footer {
+  background-color: #222;
+  color: #ddd;
 }

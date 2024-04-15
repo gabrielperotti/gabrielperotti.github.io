@@ -10,37 +10,48 @@
 
 <body>
   <header>
-    <h1>Gabriel Perotti</h1>
-    <p>Desarrollador Full Stack</p>
+    <div class="container">
+      <h1>Gabriel Perotti</h1>
+      <p>Desarrollador Full Stack con más de 20 años de experiencia</p>
+      <button onclick="toggleNightMode()">Modo Nocturno</button>
+      <button onclick="toggleLanguage()">EN / ES</button>
+    </div>
   </header>
   <nav>
-    <ul>
-      <li><a href="#about">Sobre Mí</a></li>
-      <li><a href="#experience">Experiencia</a></li>
-      <li><a href="#portfolio">Portafolio</a></li>
-      <li><a href="#contact">Contacto</a></li>
-    </ul>
-    <button onclick="toggleNightMode()">Modo Nocturno</button>
-    <button onclick="toggleLanguage()">Cambiar Idioma</button>
+    <div class="container">
+      <ul>
+        <li><a href="#about">Sobre mí</a></li>
+        <li><a href="#experience">Experiencia</a></li>
+        <li><a href="#portfolio">Portafolio</a></li>
+        <li><a href="#contact">Contacto</a></li>
+      </ul>
+    </div>
   </nav>
-  <section id="about">
-    <h2>Sobre Mí</h2>
-    <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Proin malesuada nisi eget ipsum blandit vehicula.</p>
-  </section>
-  <section id="experience">
-    <h2>Experiencia</h2>
-    <p>Detallaré tu experiencia laboral significativa, utilizando la información proporcionada en tu currículum.</p>
-  </section>
-  <section id="portfolio">
-    <h2>Portafolio</h2>
-    <p>Aquí se mostrarán ejemplos de proyectos en los que has trabajado, destacando tu versatilidad en diferentes stacks
-      tecnológicos.</p>
-  </section>
-  <section id="contact">
-    <h2>Contacto</h2>
-    <p>Información para contactarte directamente y enlaces a tus redes sociales o profesionales.</p>
-  </section>
-  <footer>
+  <main>
+    <section id="about" class="container">
+      <h2>Sobre Mí</h2>
+      <p>Profesional proactivo y con predisposición constante al aprendizaje, ofrezco soluciones integrales y adaptadas
+        a cada problema, con capacidad de trabajar tanto en el frontend como en el backend.</p>
+    </section>
+    <section id="experience" class="container">
+      <h2>Experiencia</h2>
+      <ul>
+        <li>Desarrollador en PRONET OL, liderando proyectos de software para la industria del vino.</li>
+        <li>Desarrollo y mantenimiento de sistemas HIS y ERP en Hospital Central Mendoza.</li>
+        <li>Desarrollo de plataformas de telemedicina y soluciones de software para la industria del cannabis.</li>
+      </ul>
+    </section>
+    <section id="portfolio" class="container">
+      <h2>Portafolio</h2>
+      <p>Proyectos destacados en los que he trabajado, incluyendo soluciones para el sector salud y aplicaciones B2B.
+      </p>
+    </section>
+    <section id="contact" class="container">
+      <h2>Contacto</h2>
+      <p>¿Interesado en colaborar? No dudes en contactarme a través de las siguientes plataformas.</p>
+    </section>
+  </main>
+  <footer class="container">
     <p>&copy; 2024 Gabriel Perotti. Todos los derechos reservados.</p>
   </footer>
   <script src="script.js"></script>
