@@ -3,27 +3,32 @@ let isEnglish = false;
 
 const texts = {
   en: {
-    title: "Welcome",
-    description: "This is a demo page with multi-language support and night mode."
+    about: "About Me",
+    experience: "Experience",
+    portfolio: "Portfolio",
+    contact: "Contact",
+    description: "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Proin malesuada nisi eget ipsum blandit vehicula."
   },
   es: {
-    title: "Bienvenido",
-    description: "Esta es una página de demostración con soporte multi-idioma y modo nocturno."
+    about: "Sobre Mí",
+    experience: "Experiencia",
+    portfolio: "Portafolio",
+    contact: "Contacto",
+    description: "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Proin malesuada nisi eget ipsum blandit vehicula."
   }
 };
 
 function toggleNightMode() {
   isNightMode = !isNightMode;
-  if (isNightMode) {
-    document.body.classList.add('night');
-  } else {
-    document.body.classList.remove('night');
-  }
+  document.body.className = isNightMode ? 'night' : '';
 }
 
 function toggleLanguage() {
   isEnglish = !isEnglish;
-  const language = isEnglish ? 'en' : 'es';
-  document.getElementById('title').textContent = texts[language].title;
-  document.getElementById('description').textContent = texts[language].description;
+  const lang = isEnglish ? 'en' : 'es';
+  document.getElementById('about').innerText = texts[lang].about;
+  document.getElementById('experience').innerText = texts[lang].experience;
+  document.getElementById('portfolio').innerText = texts[lang].portfolio;
+  document.getElementById('contact').innerText = texts[lang].contact;
+  document.querySelector('#about p').innerText = texts[lang].description;
 }

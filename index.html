@@ -4,16 +4,45 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Plantilla Multi-idioma con Modo Nocturno</title>
+  <title>Gabriel Perotti - Desarrollador Full Stack</title>
   <link rel="stylesheet" href="styles.css">
 </head>
 
 <body>
-  <button onclick="toggleNightMode()">Modo Nocturno</button>
-  <button onclick="toggleLanguage()">Cambiar Idioma</button>
-  <h1 id="title">Bienvenido</h1>
-  <p id="description">Esta es una página de demostración con soporte multi-idioma y modo nocturno.</p>
-
+  <header>
+    <h1>Gabriel Perotti</h1>
+    <p>Desarrollador Full Stack</p>
+  </header>
+  <nav>
+    <ul>
+      <li><a href="#about">Sobre Mí</a></li>
+      <li><a href="#experience">Experiencia</a></li>
+      <li><a href="#portfolio">Portafolio</a></li>
+      <li><a href="#contact">Contacto</a></li>
+    </ul>
+    <button onclick="toggleNightMode()">Modo Nocturno</button>
+    <button onclick="toggleLanguage()">Cambiar Idioma</button>
+  </nav>
+  <section id="about">
+    <h2>Sobre Mí</h2>
+    <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Proin malesuada nisi eget ipsum blandit vehicula.</p>
+  </section>
+  <section id="experience">
+    <h2>Experiencia</h2>
+    <p>Detallaré tu experiencia laboral significativa, utilizando la información proporcionada en tu currículum.</p>
+  </section>
+  <section id="portfolio">
+    <h2>Portafolio</h2>
+    <p>Aquí se mostrarán ejemplos de proyectos en los que has trabajado, destacando tu versatilidad en diferentes stacks
+      tecnológicos.</p>
+  </section>
+  <section id="contact">
+    <h2>Contacto</h2>
+    <p>Información para contactarte directamente y enlaces a tus redes sociales o profesionales.</p>
+  </section>
+  <footer>
+    <p>&copy; 2024 Gabriel Perotti. Todos los derechos reservados.</p>
+  </footer>
   <script src="script.js"></script>
 </body>
 
