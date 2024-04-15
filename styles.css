@@ -1,9 +1,9 @@
-body {
-  font-family: 'Arial', sans-serif;
+body,
+html {
+  height: 100%;
   margin: 0;
   padding: 0;
-  background-color: #f4f4f4;
-  color: #333;
+  font-family: 'Arial', sans-serif;
   transition: background-color 0.3s, color 0.3s;
 }
 
@@ -12,30 +12,48 @@ body {
   max-width: 1200px;
   margin: auto;
   overflow: hidden;
+  padding: 20px;
 }
 
-header,
-nav,
-footer {
+header {
   background-color: #007BFF;
   color: white;
-  padding: 1em 0;
+  padding: 20px 0;
   text-align: center;
+  position: fixed;
+  width: 100%;
+  top: 0;
+  left: 0;
+  transition: padding 0.3s;
+  z-index: 1000;
+}
+
+header.small {
+  padding: 10px 0;
 }
 
 header button {
-  float: right;
-  margin: 10px;
+  position: absolute;
+  top: 20px;
+  right: 20px;
   padding: 10px;
   background-color: #333;
   color: white;
   border: none;
   cursor: pointer;
+  transition: top 0.3s;
+}
+
+header.small button {
+  top: 5px;
 }
 
 nav ul {
   list-style-type: none;
   padding: 0;
+  text-align: center;
+  margin-top: 60px;
+  /* Espacio para el header cuando se achica */
 }
 
 nav ul li {
@@ -49,13 +67,24 @@ nav a {
 }
 
 main {
-  padding: 20px 0;
+  padding-top: 140px;
+  /* Espacio para el header */
+}
+
+section {
+  min-height: 100vh;
+  /* Altura mínima de cada sección */
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
 }
 
 footer {
   text-align: center;
   padding: 10px 0;
   font-size: 0.8em;
+  background-color: #007BFF;
+  color: white;
 }
 
 .night {
