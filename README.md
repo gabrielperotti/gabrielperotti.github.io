@@ -1,6 +1,6 @@
 # gabrielperotti.com
 
-Sitio web personal de Gabriel Perotti - Desarrollador Full Stack Senior
+Sitio web personal de **Gabriel Perotti** – Desarrollador Full Stack Senior
 
 ## 👨‍💻 Sobre mí
 
@@ -8,50 +8,93 @@ Desarrollador Full Stack Senior con amplia experiencia en el diseño, desarrollo
 
 ## 🎯 Perfil profesional
 
-- **Rol**: Desarrollador Full Stack Senior / Software Engineer
-- **Disponibilidad**: Trabajos remotos y part-time
-- **Enfoque**: Soluciones robustas, escalables y mantenibles
+- **Rol**: Desarrollador Full Stack Senior / Software Engineer  
+- **Disponibilidad**: Trabajos remotos y part-time  
+- **Enfoque**: Soluciones robustas, escalables y mantenibles  
 
 ## 💼 Experiencia destacada
 
 ### Sectores de especialización
 
-- **Salud**: Desarrollo de sistemas críticos para gestión de información médica, cumplimiento normativo y experiencia de usuario en entornos sanitarios.
-- **Banca**: Implementación de soluciones financieras seguras, APIs de integración y sistemas de procesamiento de transacciones.
+- **Salud**: Desarrollo de sistemas críticos para gestión de información médica, cumplimiento normativo y experiencia de usuario en entornos sanitarios.  
+- **Banca**: Implementación de soluciones financieras seguras, APIs de integración y sistemas de procesamiento de transacciones.  
 - **SaaS**: Arquitectura y desarrollo de plataformas software como servicio, con enfoque en escalabilidad, multi-tenancy y experiencia de usuario.
 
 ## 🚀 Tecnologías y habilidades
 
 Stack tecnológico moderno con experiencia en:
-- Frontend: React, Vue, TypeScript, HTML5, CSS3
-- Backend: Node.js, Python, Java, arquitecturas REST y GraphQL
-- Bases de datos: PostgreSQL, MongoDB, Redis
-- DevOps: Docker, CI/CD, cloud services (AWS, Azure, GCP)
-- Metodologías: Agile, Scrum, TDD, code reviews
+
+- **Frontend**: React, Vue, TypeScript, HTML5, CSS3  
+- **Backend**: Node.js, Python, Java, arquitecturas REST y GraphQL  
+- **Bases de datos**: PostgreSQL, MongoDB, Redis  
+- **DevOps**: Docker, CI/CD, cloud services (AWS, Azure, GCP)  
+- **Metodologías**: Agile, Scrum, TDD, code reviews
 
 ## 📋 Estructura del sitio
 
 El sitio incluye las siguientes secciones:
 
-- **Hero**: Presentación principal y valor diferencial
-- **Sobre mí**: Perfil profesional y trayectoria
-- **Experiencia destacada**: Proyectos y logros en salud, banca y SaaS
-- **Skills**: Tecnologías y herramientas dominadas
-- **Proyectos**: Portfolio de trabajos relevantes
-- **Contacto**: Formas de contacto y disponibilidad
+- **Hero**: Presentación principal y valor diferencial  
+- **Sobre mí**: Perfil profesional y trayectoria  
+- **Experiencia destacada**: Proyectos y logros en salud, banca y SaaS  
+- **Skills**: Tecnologías y herramientas dominadas  
+- **Proyectos**: Portfolio de trabajos relevantes  
+- **Contacto**: Formas de contacto y disponibilidad  
+
+## 🌍 Multi-idioma
+
+El sitio está disponible en **tres idiomas**:
+
+- Español (ES)  
+- Inglés (EN)  
+- Portugués (PT)  
+
+El contenido se administra mediante archivos centralizados y un sistema de traducciones que permite mantener consistencia entre idiomas.
+
+## 🌓 Tema claro / oscuro
+
+El sitio soporta **tema claro y oscuro**, con:
+
+- Toggle visible en el header  
+- Preferencias persistentes por usuario mediante `localStorage`  
+- Diseño basado en variables CSS para adaptar colores y contraste
+
+## 📄 Descarga de CV
+
+El sitio permite descargar mi currículum en PDF en múltiples idiomas:
+
+- `cv/gabriel-perotti-es.pdf`  
+- `cv/gabriel-perotti-en.pdf`  
+- `cv/gabriel-perotti-pt.pdf`  
+
+Los botones de descarga cambian dinámicamente según el idioma seleccionado.
+
+## 🗂 Directorio `docs/` (uso en desarrollo)
+
+La carpeta `docs/` contiene:
+
+- Especificaciones del sitio (`site-spec.md`)  
+- Contenido fuente en cada idioma (`content-es.md`, `content-en.md`, `content-pt.md`)  
+- Notas para IA y documentación auxiliar  
+
+> ⚠️ Esta carpeta **no forma parte del sitio en producción**.  
+> Sirve únicamente como apoyo para el desarrollo y para herramientas de IA como Cursor.
 
 ## 🎯 Objetivo del sitio
 
 Este sitio web personal está diseñado para:
-- Presentar mi perfil como desarrollador full stack senior
-- Destacar experiencia en sectores críticos (salud, banca, SaaS)
-- Atraer oportunidades de trabajo remoto y part-time
-- Mostrar proyectos y habilidades técnicas relevantes
-- Facilitar el contacto con empresas y startups
+
+- Presentar mi perfil como desarrollador full stack senior  
+- Destacar experiencia en sectores críticos (salud, banca, SaaS)  
+- Atraer oportunidades de trabajo remoto y part-time  
+- Mostrar proyectos y habilidades técnicas relevantes  
+- Ofrecer descarga de CV y formas de contacto claras  
+- Ser una plataforma mantenible, escalable y simple de desplegar
 
 ## 📧 Contacto
 
-Disponible para proyectos remotos y part-time. Abierto a colaboraciones en startups y empresas que busquen experiencia senior en desarrollo full stack.
+Disponible para proyectos remotos y part-time.  
+Abierto a colaboraciones en startups y empresas que busquen experiencia senior en desarrollo full stack.
 
 ---
 
