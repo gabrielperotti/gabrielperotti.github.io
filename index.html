@@ -2,24 +2,171 @@
 <html lang="es">
   <head>
     <meta charset="UTF-8" />
-    <title>Gabriel Perotti - Desarrollador</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Gabriel Perotti - Desarrollador Full Stack Senior</title>
     <link rel="stylesheet" href="./styles.css" />
   </head>
   <body>
-    <header>
-      <h1>Gabriel Perotti</h1>
-      <p>Desarrollador Full Stack / Software Engineer</p>
+    <header class="site-header">
+      <div class="header-content">
+        <div class="header-name">
+          <h1>Gabriel Perotti</h1>
+          <p class="tagline">Desarrollador Full Stack / Software Engineer</p>
+        </div>
+        <div class="header-controls">
+          <nav class="lang-switch">
+            <button class="lang-btn" data-lang="es" aria-label="Español">ES</button>
+            <button class="lang-btn" data-lang="en" aria-label="English">EN</button>
+            <button class="lang-btn" data-lang="pt" aria-label="Português">PT</button>
+          </nav>
+          <button id="theme-toggle" class="theme-toggle" aria-label="Toggle theme">
+            <span class="theme-icon">🌙</span>
+          </button>
+        </div>
+      </div>
     </header>
 
     <main>
-      <section id="hero">
-        <h2>Bienvenido a mi sitio personal</h2>
-        <p>Pronto voy a reescribir esta landing con ayuda de Cursor.</p>
+      <section id="hero" class="hero">
+        <h2 data-i18n="hero.title">Desarrollador Full Stack Senior para proyectos críticos y remotos</h2>
+        <p class="hero-subtitle" data-i18n="hero.subtitle">+20 años construyendo productos en salud, banca y SaaS B2B. Me integro rápido, ordeno la arquitectura y entrego valor temprano.</p>
+        <div class="hero-ctas">
+          <a href="#contact" class="btn btn-primary" data-i18n="hero.ctaContact">Contactarme</a>
+          <a href="#cv" class="btn btn-secondary" data-i18n="hero.ctaCV">Descargar CV</a>
+        </div>
+      </section>
+
+      <section id="about" class="about">
+        <h2 data-i18n="about.title">Sobre mí</h2>
+        <div class="about-body" data-i18n="about.body">Soy Gabriel Perotti, desarrollador full stack senior con foco en resolver problemas complejos y modernizar sistemas grandes. He liderado equipos y entregado productos que combinan seguridad, performance y una experiencia de usuario clara.
+Me muevo bien en contextos remotos/part-time, trabajando cerca del negocio y la operación para que la tecnología avance sin fricción.</div>
+      </section>
+
+      <section id="services" class="services">
+        <h2 data-i18n="services.title">Qué hago / Cómo puedo ayudar</h2>
+        <ul class="services-list">
+          <li data-i18n="services.items[0]">Diseño y desarrollo de MVPs y releases tempranas con ciclos cortos.</li>
+          <li data-i18n="services.items[1]">Modernización progresiva de sistemas legados (ej. VB6/.NET, monolitos a servicios).</li>
+          <li data-i18n="services.items[2]">Arquitectura técnica, revisiones de código y mentoring de equipos.</li>
+          <li data-i18n="services.items[3]">Integraciones seguras con APIs, terceros y plataformas financieras/sanitarias.</li>
+          <li data-i18n="services.items[4]">Acompañamiento a founders y CTOs para tomar decisiones técnicas con impacto.</li>
+        </ul>
+      </section>
+
+      <section id="experience" class="experience">
+        <h2 data-i18n="experience.title">Experiencia destacada</h2>
+        <div class="experience-items">
+          <article class="experience-item">
+            <h3 data-i18n="experience.items[0].title">Salud – Sistemas hospitalarios</h3>
+            <p class="experience-role" data-i18n="experience.items[0].role">Lead Full Stack</p>
+            <ul class="experience-bullets">
+              <li data-i18n="experience.items[0].bullets[0]">Modernización de módulos clínicos y administrativos, con foco en seguridad y cumplimiento.</li>
+              <li data-i18n="experience.items[0].bullets[1]">Reducción de tiempos de respuesta en consultas críticas.</li>
+              <li data-i18n="experience.items[0].bullets[2]">Integración con proveedores y aseguradoras, manteniendo trazabilidad de datos.</li>
+            </ul>
+          </article>
+          <article class="experience-item">
+            <h3 data-i18n="experience.items[1].title">Banca – Plataformas transaccionales</h3>
+            <p class="experience-role" data-i18n="experience.items[1].role">Senior Engineer</p>
+            <ul class="experience-bullets">
+              <li data-i18n="experience.items[1].bullets[0]">Diseño de APIs seguras y escalables para procesamiento de pagos.</li>
+              <li data-i18n="experience.items[1].bullets[1]">Mejoras de rendimiento y observabilidad en flujos de alto volumen.</li>
+              <li data-i18n="experience.items[1].bullets[2]">Fortalecimiento de controles y auditoría técnica para riesgos operativos.</li>
+            </ul>
+          </article>
+          <article class="experience-item">
+            <h3 data-i18n="experience.items[2].title">SaaS B2B – Productos multi-tenant</h3>
+            <p class="experience-role" data-i18n="experience.items[2].role">Arquitectura / Full Stack</p>
+            <ul class="experience-bullets">
+              <li data-i18n="experience.items[2].bullets[0]">Definición de arquitectura multi-tenant y pipelines CI/CD.</li>
+              <li data-i18n="experience.items[2].bullets[1]">Optimización de onboarding y experiencia de usuario para crecer sin fricción.</li>
+              <li data-i18n="experience.items[2].bullets[2]">Alineación con negocio para priorizar entregas que generen revenue temprano.</li>
+            </ul>
+          </article>
+        </div>
+      </section>
+
+      <section id="skills" class="skills">
+        <h2 data-i18n="skills.title">Tech stack / Skills</h2>
+        <div class="skills-grid">
+          <div class="skill-category">
+            <h3>Frontend</h3>
+            <p data-i18n="skills.frontend">Angular, React, TypeScript, HTML5/CSS3, UI accesible.</p>
+          </div>
+          <div class="skill-category">
+            <h3>Backend</h3>
+            <p data-i18n="skills.backend">Node.js/NestJS, .NET/VB6 (migraciones), Java, Python; REST/GraphQL.</p>
+          </div>
+          <div class="skill-category">
+            <h3>Bases de datos</h3>
+            <p data-i18n="skills.databases">PostgreSQL, SQL Server, MongoDB, Redis; modelado y performance.</p>
+          </div>
+          <div class="skill-category">
+            <h3>DevOps</h3>
+            <p data-i18n="skills.devops">Docker, CI/CD, observabilidad; despliegues en AWS/Azure/GCP.</p>
+          </div>
+          <div class="skill-category">
+            <h3>Prácticas</h3>
+            <p data-i18n="skills.practices">Arquitectura evolutiva, TDD cuando aplica, code reviews y seguridad por diseño.</p>
+          </div>
+        </div>
+      </section>
+
+      <section id="projects" class="projects">
+        <h2 data-i18n="projects.title">Proyectos seleccionados</h2>
+        <div class="projects-list">
+          <article class="project-item">
+            <h3 data-i18n="projects.items[0].title">Migración clínica</h3>
+            <p class="project-type" data-i18n="projects.items[0].type">Salud</p>
+            <p class="project-description" data-i18n="projects.items[0].description">Refactor de sistema hospitalario; tiempos de carga -40% y mejor cumplimiento de auditoría.</p>
+          </article>
+          <article class="project-item">
+            <h3 data-i18n="projects.items[1].title">Pasarela bancaria</h3>
+            <p class="project-type" data-i18n="projects.items[1].type">Banca</p>
+            <p class="project-description" data-i18n="projects.items[1].description">API de pagos y conciliación; latencia reducida y mayor confiabilidad en cierres.</p>
+          </article>
+          <article class="project-item">
+            <h3 data-i18n="projects.items[2].title">Plataforma SaaS B2B</h3>
+            <p class="project-type" data-i18n="projects.items[2].type">SaaS</p>
+            <p class="project-description" data-i18n="projects.items[2].description">Arquitectura multi-tenant y CI/CD; lanzamientos más frecuentes y onboarding más simple.</p>
+          </article>
+        </div>
+      </section>
+
+      <section id="cv" class="cv">
+        <h2 data-i18n="cv.title">Descarga de CV</h2>
+        <p data-i18n="cv.text">Podés descargar mi CV actualizado en PDF:</p>
+        <div class="cv-links">
+          <a href="public/cv/gabriel-perotti-es.pdf" class="btn btn-secondary" download>Español</a>
+          <a href="public/cv/gabriel-perotti-en.pdf" class="btn btn-secondary" download>English</a>
+          <a href="public/cv/gabriel-perotti-pt.pdf" class="btn btn-secondary" download>Português</a>
+        </div>
+      </section>
+
+      <section id="contact" class="contact">
+        <h2 data-i18n="contact.title">Contacto</h2>
+        <div class="contact-info">
+          <p>
+            <strong>Email:</strong>
+            <a href="mailto:gabriel@gabrielperotti.com" data-i18n="contact.email">gabriel@gabrielperotti.com</a>
+          </p>
+          <p>
+            <strong>LinkedIn:</strong>
+            <a href="https://www.linkedin.com/in/gabrielperotti" target="_blank" rel="noopener noreferrer" data-i18n="contact.linkedin">https://www.linkedin.com/in/gabrielperotti</a>
+          </p>
+          <p>
+            <strong>GitHub:</strong>
+            <a href="https://github.com/gperotti" target="_blank" rel="noopener noreferrer" data-i18n="contact.github">https://github.com/gperotti</a>
+          </p>
+        </div>
       </section>
     </main>
 
-    <footer>
+    <footer class="site-footer">
       <p>© Gabriel Perotti</p>
     </footer>
- </body>
+
+    <script src="js/i18n.js"></script>
+    <script src="js/app.js"></script>
+  </body>
 </html>
