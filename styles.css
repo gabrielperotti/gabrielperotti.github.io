@@ -1,4 +1,4 @@
-@import url("https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600;700;800&display=swap");
 
 /* ============================================================
    RESET BÁSICO MODERNO
@@ -10,7 +10,7 @@
 }
 
 html {
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-family: "Montserrat", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
   scroll-behavior: smooth;
@@ -162,35 +162,38 @@ strong {
   gap: 20px;
 }
 
-.header-name h1 {
-  margin-bottom: 4px;
-  font-size: 1.5rem;
+.header-name {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
 
 .logo {
+  font-family: "Montserrat", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 1.4rem;
+  font-weight: 700;
+  letter-spacing: -0.5px;
   display: flex;
   align-items: center;
-  gap: 6px;
-  font-weight: 500;
-  letter-spacing: -0.02em;
-}
-
-.logo-text {
-  font-size: 1.6rem;
-  text-transform: lowercase;
+  gap: 4px;
+  cursor: pointer;
   color: var(--text);
-  font-weight: 700;
-  letter-spacing: -0.04em;
-  font-family: "Manrope", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  text-decoration: none;
 }
 
-.logo-dot {
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
-  background: var(--accent);
-  display: inline-block;
-  flex-shrink: 0;
+.logo span {
+  color: var(--primary);
+  font-weight: 700;
+}
+
+.logo-small {
+  font-family: "Montserrat", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 1.1rem;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+  color: var(--primary);
+  text-decoration: none;
+  display: none;
 }
 
 .header-name .tagline {
@@ -660,8 +663,12 @@ strong {
 }
 
 @media (max-width: 480px) {
-  .header-name h1 {
-    font-size: 1.25rem;
+  .logo {
+    display: none;
+  }
+
+  .logo-small {
+    display: inline-flex;
   }
 
   .hero h2 {
