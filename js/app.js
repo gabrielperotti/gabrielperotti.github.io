@@ -42,6 +42,18 @@ function setLang(lang) {
   applyTranslations();
   updateLangButtonsUI(lang);
   updateCvLink(lang);
+  
+  // Actualizar label de navegación después de traducir
+  setTimeout(() => {
+    const currentSection = document.querySelector(".nav-link.active")?.getAttribute("data-section");
+    if (currentSection) {
+      const activeLink = document.querySelector(`.nav-link[data-section="${currentSection}"]`);
+      const navLabel = document.getElementById("nav-label");
+      if (activeLink && navLabel) {
+        navLabel.textContent = activeLink.textContent;
+      }
+    }
+  }, 100);
 }
 
 function updateLangButtonsUI(lang) {
@@ -186,4 +198,119 @@ document.addEventListener("DOMContentLoaded", () => {
       toggleTheme();
     });
   }
+
+  // ==== Navegación activa ====
+  
+  const sections = document.querySelectorAll("section[id]");
+  const navLinks = document.querySelectorAll(".nav-link, .nav-option");
+  const navToggle = document.getElementById("nav-toggle");
+  const navMenu = document.querySelector(".nav-menu");
+  const navLabel = document.getElementById("nav-label");
+
+  function updateActiveNav(sectionId) {
+    navLinks.forEach((link) => {
+      const linkSection = link.getAttribute("data-section");
+      if (linkSection === sectionId) {
+        link.classList.add("active");
+        // Actualizar el label del dropdown mobile
+        if (navLabel && link.classList.contains("nav-link")) {
+          navLabel.textContent = link.textContent;
+        }
+      } else {
+        link.classList.remove("active");
+      }
+    });
+  }
+
+  function getCurrentSection() {
+    const scrollPosition = window.scrollY + 150; // Offset para considerar el header
+
+    for (let i = sections.length - 1; i >= 0; i--) {
+      const section = sections[i];
+      const sectionTop = section.offsetTop;
+      const sectionHeight = section.offsetHeight;
+
+      if (scrollPosition >= sectionTop && scrollPosition < sectionTop + sectionHeight) {
+        return section.getAttribute("id");
+      }
+    }
+
+    // Si estamos en el top, retornar hero
+    if (window.scrollY < 200) {
+      return "hero";
+    }
+
+    return null;
+  }
+
+  // Detectar scroll y actualizar navegación
+  let scrollTimeout;
+  function handleScroll() {
+    clearTimeout(scrollTimeout);
+    scrollTimeout = setTimeout(() => {
+      const currentSection = getCurrentSection();
+      if (currentSection && currentSection !== "hero" && currentSection !== "contact") {
+        updateActiveNav(currentSection);
+      } else {
+        navLinks.forEach((link) => link.classList.remove("active"));
+        if (navLabel) navLabel.textContent = navLabel.getAttribute("data-i18n") ? 
+          (window.TRANSLATIONS[currentLang]?.nav?.about || "Sobre mí") : "Sobre mí";
+      }
+    }, 100);
+  }
+
+  window.addEventListener("scroll", handleScroll);
+  handleScroll(); // Ejecutar al cargar
+
+  // Manejar clicks en links de navegación
+  navLinks.forEach((link) => {
+    link.addEventListener("click", (e) => {
+      const sectionId = link.getAttribute("data-section");
+      if (sectionId) {
+        e.preventDefault();
+        const targetSection = document.getElementById(sectionId);
+        if (targetSection) {
+          const headerHeight = document.querySelector(".site-header").offsetHeight;
+          const targetPosition = targetSection.offsetTop - headerHeight;
+          
+          window.scrollTo({
+            top: targetPosition,
+            behavior: "smooth"
+          });
+
+          // Actualizar navegación después del scroll
+          setTimeout(() => {
+            updateActiveNav(sectionId);
+          }, 500);
+
+          // Cerrar menú mobile si está abierto
+          if (navMenu) {
+            navMenu.classList.remove("open");
+            if (navToggle) navToggle.setAttribute("aria-expanded", "false");
+          }
+        }
+      }
+    });
+  });
+
+  // Dropdown de navegación mobile
+  if (navToggle && navMenu) {
+    const closeNavMenu = () => {
+      navMenu.classList.remove("open");
+      navToggle.setAttribute("aria-expanded", "false");
+    };
+
+    navToggle.addEventListener("click", (e) => {
+      e.preventDefault();
+      const isOpen = navMenu.classList.toggle("open");
+      navToggle.setAttribute("aria-expanded", isOpen ? "true" : "false");
+    });
+
+    document.addEventListener("click", (e) => {
+      if (!navMenu.contains(e.target) && !navToggle.contains(e.target)) {
+        closeNavMenu();
+      }
+    });
+  }
+
 });
