@@ -102,10 +102,19 @@ function toggleTheme() {
 }
 
 function updateThemeToggleUI(theme) {
-  const btn = document.getElementById("theme-toggle");
-  if (!btn) return;
+  const icon = document.getElementById("theme-icon");
+  if (!icon) return;
 
-  btn.textContent = theme === THEME_LIGHT ? "🌙" : "☀️";
+  // Mostrar el ícono del tema al que se cambiará (no el actual)
+  if (theme === THEME_LIGHT) {
+    // Si estamos en modo claro, mostrar luna para cambiar a oscuro
+    icon.src = "https://cdn.jsdelivr.net/npm/@tabler/icons/icons/moon.svg";
+    icon.alt = "Switch to dark mode";
+  } else {
+    // Si estamos en modo oscuro, mostrar sol para cambiar a claro
+    icon.src = "https://cdn.jsdelivr.net/npm/@tabler/icons/icons/sun.svg";
+    icon.alt = "Switch to light mode";
+  }
 }
 
 // ==== Init ====
