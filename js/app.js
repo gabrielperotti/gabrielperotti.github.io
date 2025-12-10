@@ -69,16 +69,23 @@ function updateLangButtonsUI(lang) {
 
 function updateCvLink(lang) {
   const cvBtn = document.getElementById("cv-download-btn");
-  if (!cvBtn) return;
-
-  // Ajusta los nombres de archivo si usás otros
+  const floatingCvBtn = document.getElementById("floating-cv-btn");
+  
   const fileMap = {
-    es: "cv/gabriel-perotti-es.pdf",
-    en: "cv/gabriel-perotti-en.pdf",
-    pt: "cv/gabriel-perotti-pt.pdf",
+    es: "public/cv/gabriel-perotti-es.pdf",
+    en: "public/cv/gabriel-perotti-en.pdf",
+    pt: "public/cv/gabriel-perotti-pt.pdf",
   };
 
-  cvBtn.setAttribute("href", fileMap[lang] || fileMap[DEFAULT_LANG]);
+  const cvPath = fileMap[lang] || fileMap[DEFAULT_LANG];
+  
+  if (cvBtn) {
+    cvBtn.setAttribute("href", cvPath);
+  }
+  
+  if (floatingCvBtn) {
+    floatingCvBtn.setAttribute("href", cvPath);
+  }
 }
 
 // ==== Tema claro / oscuro ====

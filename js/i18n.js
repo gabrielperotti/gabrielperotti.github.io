@@ -94,6 +94,11 @@ window.TRANSLATIONS = {
       email: "gabriel@gabrielperotti.com",
       linkedin: "https://www.linkedin.com/in/gabrielperotti",
       github: "https://github.com/gperotti"
+    },
+    nav: {
+      about: "Sobre mí",
+      projects: "Proyectos",
+      skills: "Skills"
     }
   },
   en: {
@@ -191,6 +196,11 @@ window.TRANSLATIONS = {
       email: "gabriel@gabrielperotti.com",
       linkedin: "https://www.linkedin.com/in/gabrielperotti",
       github: "https://github.com/gperotti"
+    },
+    nav: {
+      about: "About me",
+      projects: "Projects",
+      skills: "Skills"
     }
   },
   pt: {
@@ -288,6 +298,11 @@ window.TRANSLATIONS = {
       email: "gabriel@gabrielperotti.com",
       linkedin: "https://www.linkedin.com/in/gabrielperotti",
       github: "https://github.com/gperotti"
+    },
+    nav: {
+      about: "Sobre mim",
+      projects: "Projetos",
+      skills: "Skills"
     }
   }
 };

@@ -14,7 +14,15 @@
           <a href="#hero" class="logo-small">GP</a>
           <p class="tagline">Desarrollador Full Stack / Software Engineer</p>
         </div>
+        <nav class="header-nav">
+          <a href="#about" class="nav-link" data-i18n="nav.about">Sobre mí</a>
+          <a href="#projects" class="nav-link" data-i18n="nav.projects">Proyectos</a>
+          <a href="#skills" class="nav-link" data-i18n="nav.skills">Skills</a>
+        </nav>
         <div class="header-controls">
+          <button id="theme-toggle" class="theme-toggle" aria-label="Toggle theme">
+            <img src="https://cdn.jsdelivr.net/npm/@tabler/icons/icons/sun.svg" alt="Switch to light mode" class="theme-icon" id="theme-icon" />
+          </button>
           <div class="lang-dropdown">
             <button id="lang-toggle" class="lang-btn lang-toggle" aria-haspopup="listbox" aria-expanded="false">
               <img src="https://flagcdn.com/w20/es.png" alt="Idioma actual" class="flag-icon" id="lang-flag" />
@@ -26,9 +34,6 @@
               <li><button class="lang-option" data-lang="pt" role="option" aria-label="Português"><img src="https://flagcdn.com/w20/pt.png" alt="Portugal" class="flag-icon" />PT</button></li>
             </ul>
           </div>
-          <button id="theme-toggle" class="theme-toggle" aria-label="Toggle theme">
-            <img src="https://cdn.jsdelivr.net/npm/@tabler/icons/icons/sun.svg" alt="Switch to light mode" class="theme-icon" id="theme-icon" />
-          </button>
         </div>
       </div>
     </header>
@@ -39,7 +44,6 @@
         <p class="hero-subtitle" data-i18n="hero.subtitle">+20 años construyendo productos en salud, banca y SaaS B2B. Me integro rápido, ordeno la arquitectura y entrego valor temprano.</p>
         <div class="hero-ctas">
           <a href="#contact" class="btn btn-primary" data-i18n="hero.ctaContact">Contactarme</a>
-          <a href="#cv" class="btn btn-secondary" data-i18n="hero.ctaCV">Descargar CV</a>
         </div>
       </section>
 
@@ -140,16 +144,6 @@ Me muevo bien en contextos remotos/part-time, trabajando cerca del negocio y la 
         </div>
       </section>
 
-      <section id="cv" class="cv">
-        <h2 data-i18n="cv.title">Descarga de CV</h2>
-        <p data-i18n="cv.text">Podés descargar mi CV actualizado en PDF:</p>
-        <div class="cv-links">
-          <a href="public/cv/gabriel-perotti-es.pdf" class="btn btn-secondary" download>Español</a>
-          <a href="public/cv/gabriel-perotti-en.pdf" class="btn btn-secondary" download>English</a>
-          <a href="public/cv/gabriel-perotti-pt.pdf" class="btn btn-secondary" download>Português</a>
-        </div>
-      </section>
-
       <section id="contact" class="contact">
         <h2 data-i18n="contact.title">Contacto</h2>
         <div class="contact-info">
@@ -172,6 +166,15 @@ Me muevo bien en contextos remotos/part-time, trabajando cerca del negocio y la 
     <footer class="site-footer">
       <p>© Gabriel Perotti</p>
     </footer>
+
+    <div class="floating-buttons">
+      <a id="floating-cv-btn" href="public/cv/gabriel-perotti-es.pdf" class="floating-btn floating-cv-btn" download data-i18n="hero.ctaCV">
+        Descargar CV
+      </a>
+      <a href="#contact" class="floating-btn floating-contact-btn" data-i18n="contact.title">
+        Contacto
+      </a>
+    </div>
 
     <script src="js/i18n.js"></script>
     <script src="js/app.js"></script>
