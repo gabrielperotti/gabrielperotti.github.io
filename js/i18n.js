@@ -99,7 +99,8 @@ window.TRANSLATIONS = {
       about: "Sobre mí",
       projects: "Proyectos",
       skills: "Skills"
-    }
+    },
+    tagline: "Desarrollador Full Stack / Software Engineer"
   },
   en: {
     hero: {
@@ -201,7 +202,8 @@ window.TRANSLATIONS = {
       about: "About me",
       projects: "Projects",
       skills: "Skills"
-    }
+    },
+    tagline: "Full Stack Developer / Software Engineer"
   },
   pt: {
     hero: {
@@ -303,7 +305,8 @@ window.TRANSLATIONS = {
       about: "Sobre mim",
       projects: "Projetos",
       skills: "Skills"
-    }
+    },
+    tagline: "Desenvolvedor Full Stack / Software Engineer"
   }
 };
 
