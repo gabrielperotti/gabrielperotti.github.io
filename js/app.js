@@ -45,13 +45,26 @@ function setLang(lang) {
 }
 
 function updateLangButtonsUI(lang) {
-  document.querySelectorAll("[data-lang]").forEach((btn) => {
+  document.querySelectorAll(".lang-option").forEach((btn) => {
     if (btn.getAttribute("data-lang") === lang) {
       btn.classList.add("active-lang");
     } else {
       btn.classList.remove("active-lang");
     }
   });
+
+  const label = document.getElementById("lang-label");
+  const flag = document.getElementById("lang-flag");
+  if (label) label.textContent = lang.toUpperCase();
+  if (flag) {
+    const flagMap = {
+      es: "https://flagcdn.com/w20/es.png",
+      en: "https://flagcdn.com/w20/gb.png",
+      pt: "https://flagcdn.com/w20/pt.png",
+    };
+    flag.src = flagMap[lang] || flagMap.es;
+    flag.alt = lang;
+  }
 }
 
 function updateCvLink(lang) {
@@ -123,13 +136,36 @@ document.addEventListener("DOMContentLoaded", () => {
   // idioma
   setLang(getSavedLang());
 
-  document.querySelectorAll("[data-lang]").forEach((btn) => {
-    btn.addEventListener("click", (e) => {
+  // menú de idiomas
+  const langToggle = document.getElementById("lang-toggle");
+  const langMenu = document.querySelector(".lang-menu");
+  const closeLangMenu = () => {
+    if (langMenu) langMenu.classList.remove("open");
+    if (langToggle) langToggle.setAttribute("aria-expanded", "false");
+  };
+
+  if (langToggle && langMenu) {
+    langToggle.addEventListener("click", (e) => {
       e.preventDefault();
-      const lang = btn.getAttribute("data-lang");
-      setLang(lang);
+      const isOpen = langMenu.classList.toggle("open");
+      langToggle.setAttribute("aria-expanded", isOpen ? "true" : "false");
     });
-  });
+
+    langMenu.querySelectorAll(".lang-option").forEach((btn) => {
+      btn.addEventListener("click", (e) => {
+        e.preventDefault();
+        const lang = btn.getAttribute("data-lang");
+        setLang(lang);
+        closeLangMenu();
+      });
+    });
+
+    document.addEventListener("click", (e) => {
+      if (!langMenu.contains(e.target) && !langToggle.contains(e.target)) {
+        closeLangMenu();
+      }
+    });
+  }
 
   // tema
   const initialTheme = getSavedTheme();

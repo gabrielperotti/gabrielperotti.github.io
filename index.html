@@ -15,20 +15,17 @@
           <p class="tagline">Desarrollador Full Stack / Software Engineer</p>
         </div>
         <div class="header-controls">
-          <nav class="lang-switch">
-            <button class="lang-btn" data-lang="es" aria-label="Español">
-              <img src="https://flagcdn.com/w20/es.png" alt="España" class="flag-icon" />
-              <span>ES</span>
+          <div class="lang-dropdown">
+            <button id="lang-toggle" class="lang-btn lang-toggle" aria-haspopup="listbox" aria-expanded="false">
+              <img src="https://flagcdn.com/w20/es.png" alt="Idioma actual" class="flag-icon" id="lang-flag" />
+              <span id="lang-label">ES</span>
             </button>
-            <button class="lang-btn" data-lang="en" aria-label="English">
-              <img src="https://flagcdn.com/w20/gb.png" alt="United Kingdom" class="flag-icon" />
-              <span>EN</span>
-            </button>
-            <button class="lang-btn" data-lang="pt" aria-label="Português">
-              <img src="https://flagcdn.com/w20/pt.png" alt="Portugal" class="flag-icon" />
-              <span>PT</span>
-            </button>
-          </nav>
+            <ul class="lang-menu" role="listbox" aria-label="Seleccionar idioma">
+              <li><button class="lang-option" data-lang="es" role="option" aria-label="Español"><img src="https://flagcdn.com/w20/es.png" alt="España" class="flag-icon" />ES</button></li>
+              <li><button class="lang-option" data-lang="en" role="option" aria-label="English"><img src="https://flagcdn.com/w20/gb.png" alt="United Kingdom" class="flag-icon" />EN</button></li>
+              <li><button class="lang-option" data-lang="pt" role="option" aria-label="Português"><img src="https://flagcdn.com/w20/pt.png" alt="Portugal" class="flag-icon" />PT</button></li>
+            </ul>
+          </div>
           <button id="theme-toggle" class="theme-toggle" aria-label="Toggle theme">
             <img src="https://cdn.jsdelivr.net/npm/@tabler/icons/icons/sun.svg" alt="Switch to light mode" class="theme-icon" id="theme-icon" />
           </button>
