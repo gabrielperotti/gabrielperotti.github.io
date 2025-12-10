@@ -108,6 +108,32 @@ main {
   padding: 0 20px;
 }
 
+@media (min-width: 1600px) {
+  .container {
+    max-width: 1200px;
+  }
+
+  main {
+    max-width: 1200px;
+  }
+
+  .header-content {
+    max-width: 1200px;
+  }
+
+  .about-body {
+    max-width: 1000px;
+  }
+
+  .services-list {
+    max-width: 1000px;
+  }
+
+  .contact-info {
+    max-width: 800px;
+  }
+}
+
 section {
   padding: 48px 0;
   border-bottom: 1px solid var(--border);
