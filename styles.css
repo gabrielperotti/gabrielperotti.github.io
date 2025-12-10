@@ -118,7 +118,7 @@ main {
   }
 
   .header-content {
-    max-width: 1200px;
+    max-width: 1200px !important;
   }
 
   .about-body {
@@ -760,7 +760,7 @@ strong {
   bottom: 24px;
   right: 24px;
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   gap: 12px;
   z-index: 100;
 }
