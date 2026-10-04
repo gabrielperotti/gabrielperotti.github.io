@@ -38,8 +38,23 @@
     return JSON.parse(JSON.stringify(value));
   }
 
-  function byCreatedAt(a, b) {
-    return a.createdAt < b.createdAt ? -1 : 1;
+  /*
+   * Orden de las listas: lo más nuevo primero.
+   *
+   * El desempate por posición de inserción importa: dos elementos creados en el
+   * mismo milisegundo tienen el mismo createdAt, y con el desempate el último
+   * agregado queda arriba, como se espera.
+   */
+  function newestFirst(list) {
+    return list
+      .map(function (item, index) { return { item: item, index: index }; })
+      .sort(function (a, b) {
+        if (a.item.createdAt !== b.item.createdAt) {
+          return a.item.createdAt < b.item.createdAt ? 1 : -1;
+        }
+        return b.index - a.index;
+      })
+      .map(function (entry) { return entry.item; });
   }
 
   function notify(scope) {
@@ -59,9 +74,7 @@
   }
 
   function jobsOf(eventId) {
-    return state.jobs
-      .filter(function (job) { return job.eventId === eventId; })
-      .sort(byCreatedAt);
+    return newestFirst(state.jobs.filter(function (job) { return job.eventId === eventId; }));
   }
 
   // Al cargar: descartar referencias que ya no existen (no debería pasar, pero
@@ -75,8 +88,11 @@
     var selected = findJob(state.selection.jobId);
     if (!selected || selected.eventId !== state.selection.eventId) state.selection.jobId = null;
 
+    // Sin selección guardada se elige lo más reciente, que es lo primero que
+    // se ve en la lista.
     if (!state.selection.eventId) {
-      state.selection.eventId = state.events.length ? state.events[0].id : null;
+      var ordered = newestFirst(state.events);
+      state.selection.eventId = ordered.length ? ordered[0].id : null;
     }
     if (state.selection.eventId && !state.selection.jobId) {
       var jobs = jobsOf(state.selection.eventId);
@@ -111,7 +127,7 @@
 
     getState: function () { return state; },
 
-    getEvents: function () { return state.events.slice().sort(byCreatedAt); },
+    getEvents: function () { return newestFirst(state.events); },
 
     getEvent: findEvent,
 
