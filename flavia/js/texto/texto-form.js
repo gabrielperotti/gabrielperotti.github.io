@@ -244,7 +244,11 @@
     }
 
     var structure = structureOf(job);
-    if (mounted.jobId === job.id && mounted.structure === structure) {
+    // El isConnected importa: si el resumen ya no está en el documento (porque
+    // se mostró el formulario de otro tipo y se vació el panel), hay que
+    // reconstruir en vez de actualizar un nodo suelto.
+    if (mounted.jobId === job.id && mounted.structure === structure
+        && summaryEl && summaryEl.isConnected) {
       updateSummary(job);
       return;
     }

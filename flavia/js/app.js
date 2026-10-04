@@ -58,9 +58,30 @@
     }
 
     if (scope === 'jobs' || scope === 'selection' || scope === 'params') {
-      var type = JobTypes.get((Store.getSelectedJob() || {}).type);
-      if (type && type.renderForm) type.renderForm(elements.form, Store.getSelectedJob(), ctx);
+      renderForm();
     }
+  }
+
+  /*
+   * Qué formulario se está mostrando. Se recuerda el último tipo usado para
+   * poder cerrarlo (limpiarlo) cuando ya no hay ningún trabajo elegido: si se
+   * usara sólo el tipo del trabajo seleccionado, al quedar null no se llamaría
+   * a nadie y el formulario anterior seguiría en pantalla.
+   */
+  var lastFormType = null;
+
+  function renderForm() {
+    var job = Store.getSelectedJob();
+    var type = JobTypes.get(job ? job.type : lastFormType);
+
+    if (!type || !type.renderForm) {
+      Dom.clear(elements.form);
+      elements.form.appendChild(Dom.el('p', { class: 'empty', text: 'Elegí un trabajo para configurarlo.' }));
+      return;
+    }
+
+    if (job) lastFormType = job.type;
+    type.renderForm(elements.form, job, ctx);
   }
 
   function onNewEvent() {
@@ -120,8 +141,7 @@
     // Primer pintado.
     EventsPanel.render(ctx);
     JobsPanel.render(ctx);
-    var type = JobTypes.get((Store.getSelectedJob() || {}).type);
-    if (type && type.renderForm) type.renderForm(elements.form, Store.getSelectedJob(), ctx);
+    renderForm();
     Preview.render(Store.getSelectedJob(), ctx);
 
     // Si el navegador no deja guardar imágenes (al abrir el archivo con doble

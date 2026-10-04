@@ -384,8 +384,12 @@
 
     // Nada que cambió estructuralmente: sólo se refresca el resumen, para no
     // romper el cursor de un campo que se está escribiendo.
+    // El isConnected importa: si el resumen ya no está en el documento (porque
+    // se mostró el formulario de otro tipo y se vació el panel), hay que
+    // reconstruir en vez de actualizar un nodo suelto.
     var structure = structureOf(job);
-    if (mounted.jobId === job.id && mounted.structure === structure) {
+    if (mounted.jobId === job.id && mounted.structure === structure
+        && summaryEl && summaryEl.isConnected) {
       updateSummary(job);
       return;
     }

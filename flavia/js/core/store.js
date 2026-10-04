@@ -88,16 +88,15 @@
     var selected = findJob(state.selection.jobId);
     if (!selected || selected.eventId !== state.selection.eventId) state.selection.jobId = null;
 
-    // Sin selección guardada se elige lo más reciente, que es lo primero que
-    // se ve en la lista.
+    // Sin selección guardada se elige el evento más reciente, que es lo primero
+    // que se ve en la lista.
     if (!state.selection.eventId) {
       var ordered = newestFirst(state.events);
       state.selection.eventId = ordered.length ? ordered[0].id : null;
     }
-    if (state.selection.eventId && !state.selection.jobId) {
-      var jobs = jobsOf(state.selection.eventId);
-      state.selection.jobId = jobs.length ? jobs[0].id : null;
-    }
+    // OJO: acá NO se elige ningún trabajo. Si no hay uno seleccionado, la
+    // configuración queda limpia y la hoja en blanco, hasta que el usuario
+    // elija uno explícitamente.
   }
 
   var Store = {
@@ -304,10 +303,11 @@
 
     /* --------------------------------------------------------- selección */
 
+    // Elegir un proyecto deselecciona el trabajo: la configuración se limpia y la
+    // hoja queda en blanco. El usuario elige el trabajo que quiere configurar.
     selectEvent: function (id) {
       state.selection.eventId = id;
-      var jobs = jobsOf(id);
-      state.selection.jobId = jobs.length ? jobs[0].id : null;
+      state.selection.jobId = null;
       saveSelection();
       notify('selection');
     },
