@@ -8,6 +8,11 @@
 }
 
 @media print {
+  /* La pantalla es oscura, pero lo que sale en el papel es blanco. */
+  html {
+    color-scheme: light;
+  }
+
   html, body {
     height: auto;
     overflow: visible;
@@ -57,7 +62,10 @@
     margin: 0;
     border: 0;
     box-shadow: none !important;
+    background: #fff !important;
   }
+
+  .piece { background: #fff !important; }
 
   /* Sin imagen no hay placeholder: se imprime la pieza vacía (útil para cortar). */
   .piece__placeholder {
