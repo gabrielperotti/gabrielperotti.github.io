@@ -24,33 +24,7 @@
   var summaryEl = null;
   var mounted = { jobId: null, structure: null };
 
-  function cmField(config) {
-    return F.numberField({
-      label: config.label,
-      unit: 'cm',
-      min: config.min === undefined ? 0.1 : config.min,
-      max: config.max,
-      step: config.step === undefined ? 0.1 : config.step,
-      value: U.mmToCm(config.mm),
-      focusKey: config.focusKey,
-      onInput: function (cm) { config.onInput(U.cmToMm(cm)); }
-    });
-  }
-
-  function mmField(config) {
-    return F.numberField({
-      label: config.label,
-      unit: 'mm',
-      min: config.min === undefined ? 0 : config.min,
-      max: config.max,
-      step: config.step === undefined ? 0.1 : config.step,
-      value: U.mmToFixed(config.mm, 2),
-      focusKey: config.focusKey,
-      onInput: config.onInput
-    });
-  }
-
-  /* ---------------------------------------------------------------- Imagen */
+    /* ---------------------------------------------------------------- Imagen */
 
   function buildImageGroup(job, ctx) {
     var jobId = job.id;
@@ -165,7 +139,7 @@
     })];
 
     if (params.shape === 'circle' || params.shape === 'square') {
-      children.push(cmField({
+      children.push(F.cmField({
         label: params.shape === 'circle' ? 'Diámetro' : 'Lado',
         mm: params.sizeMm,
         focusKey: 'mosaic-size',
@@ -175,7 +149,7 @@
       }));
     } else {
       children.push(F.row([
-        cmField({
+        F.cmField({
           label: 'Ancho',
           mm: params.widthMm,
           focusKey: 'mosaic-width',
@@ -183,7 +157,7 @@
             ctx.store.updateJobParams(job.id, function (draft) { draft.widthMm = value; });
           }
         }),
-        cmField({
+        F.cmField({
           label: 'Alto',
           mm: params.heightMm,
           focusKey: 'mosaic-height',
@@ -305,51 +279,16 @@
   /* ----------------------------------------------------------------- Bordes */
 
   function buildBorderGroup(job, ctx) {
-    var border = job.image.border;
-    var children = [F.checkbox({
-      label: 'Activar borde',
-      checked: border.enabled,
-      onChange: function (enabled) {
-        ctx.store.updateJobImage(job.id, function (draft) { draft.border.enabled = enabled; });
+    return F.borderGroup({
+      title: 'Borde de cada pieza',
+      focusPrefix: 'mosaic',
+      styleOptions: Defaults.BORDER_STYLES,
+      border: job.image.border,
+      hint: 'El borde va incluido en la medida de la pieza (medida exterior).',
+      onChange: function (mutate) {
+        ctx.store.updateJobImage(job.id, function (draft) { mutate(draft.border); });
       }
-    })];
-
-    if (border.enabled) {
-      children.push(F.row([
-        mmField({
-          label: 'Grosor',
-          mm: border.widthMm,
-          step: 0.1,
-          focusKey: 'mosaic-border-width',
-          onInput: function (value) {
-            ctx.store.updateJobImage(job.id, function (draft) { draft.border.widthMm = value; });
-          }
-        }),
-        F.selectField({
-          label: 'Estilo',
-          options: Defaults.BORDER_STYLES,
-          value: border.style,
-          focusKey: 'mosaic-border-style',
-          onChange: function (style) {
-            ctx.store.updateJobImage(job.id, function (draft) { draft.border.style = style; });
-          }
-        })
-      ]));
-      children.push(F.colorField({
-        label: 'Color',
-        value: border.color,
-        focusKey: 'mosaic-border-color',
-        onInput: function (color) {
-          ctx.store.updateJobImage(job.id, function (draft) { draft.border.color = color; });
-        }
-      }));
-      children.push(Dom.el('p', {
-        class: 'field__hint',
-        text: 'El borde va incluido en la medida de la pieza (medida exterior).'
-      }));
-    }
-
-    return F.group('Borde de cada pieza', children);
+    });
   }
 
   /* --------------------------------------------------- Separación y márgenes */
@@ -358,7 +297,7 @@
     var params = job.params;
     return F.group('Separación entre piezas', [
       F.row([
-        mmField({
+        F.mmField({
           label: 'Horizontal',
           mm: params.gapXMm,
           focusKey: 'mosaic-gap-x',
@@ -366,7 +305,7 @@
             ctx.store.updateJobParams(job.id, function (draft) { draft.gapXMm = value; });
           }
         }),
-        mmField({
+        F.mmField({
           label: 'Vertical',
           mm: params.gapYMm,
           focusKey: 'mosaic-gap-y',
@@ -381,7 +320,7 @@
   function buildMarginsGroup(job, ctx) {
     var margins = job.params.marginsMm;
     var field = function (label, key, focusKey) {
-      return mmField({
+      return F.mmField({
         label: label,
         mm: margins[key],
         focusKey: focusKey,

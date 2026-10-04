@@ -23,7 +23,9 @@
   .no-print,
   .app__sidebar,
   .app__jobs,
-  .app__config {
+  .app__config,
+  .confirm,
+  .toast {
     display: none !important;
   }
 
@@ -67,9 +69,19 @@
 
   .piece { background: #fff !important; }
 
-  /* Sin imagen no hay placeholder: se imprime la pieza vacía (útil para cortar). */
+  /* Los avisos de pantalla ("no entra", "se está cortando") no se imprimen */
+  .sheet__hint {
+    display: none !important;
+  }
+
+  /* Sin imagen o sin texto no se imprime el placeholder: sirve para cortar vacío */
   .piece__placeholder {
     display: none !important;
+  }
+
+  .text-block--empty {
+    background: transparent !important;
+    outline: none !important;
   }
 
   /* Bordes, círculos y colores de fondo deben salir impresos. */

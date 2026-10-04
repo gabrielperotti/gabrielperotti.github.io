@@ -46,16 +46,29 @@
     },
 
     // Registra los tipos que trae la aplicación.
+    // Agregar uno nuevo = crear su módulo y sumar una entrada acá.
     registerBuiltin: function () {
       var Mosaic = Impresion.Mosaic;
+      var Texto = Impresion.Texto;
 
       JobTypes.register({
         id: 'mosaic',
         label: 'Mosaico',
+        description: 'Repetir una imagen muchas veces en la hoja: stickers, etiquetas, sells.',
         createDefaults: Mosaic.Defaults.createParams,
         getMarginsMm: function (job) { return Mosaic.Calculator.getMarginsMm(job.params); },
         renderForm: Mosaic.Form.render,
         renderPrintable: Mosaic.Renderer.render
+      });
+
+      JobTypes.register({
+        id: 'texto',
+        label: 'Texto',
+        description: 'Un texto sobre la hoja: frases, rótulos y tarjetas.',
+        createDefaults: Texto.Defaults.createParams,
+        getMarginsMm: function () { return Texto.Defaults.getMarginsMm(); },
+        renderForm: Texto.Form.render,
+        renderPrintable: Texto.Renderer.render
       });
     }
   };

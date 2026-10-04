@@ -197,7 +197,9 @@
       var job = {
         id: newId('job'),
         eventId: eventId,
-        title: 'Trabajo nuevo',
+        // El tipo ya se eligió en el selector, así que el nombre por defecto lo
+        // dice y el usuario lo renombra.
+        title: type.label,
         type: typeId,
         settings: Paper.newSettings(),
         imageId: null,

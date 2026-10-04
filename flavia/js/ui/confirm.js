@@ -16,19 +16,19 @@
   function build() {
     if (ui) return ui;
 
-    var messageEl = Dom.el('p', { class: 'confirm__message' });
+    var messageEl = Dom.el('p', { class: 'dialog__message' });
     var acceptBtn = Dom.el('button', { type: 'button', class: 'btn btn--danger', text: 'Eliminar' });
     var cancelBtn = Dom.el('button', { type: 'button', class: 'btn', text: 'Cancelar' });
 
     var dialog = Dom.el('div', {
-      class: 'confirm',
+      class: 'overlay confirm',
       role: 'dialog',
       'aria-modal': 'true'
     }, [
-      Dom.el('div', { class: 'confirm__box' }, [
-        Dom.el('h2', { class: 'confirm__title' }),
+      Dom.el('div', { class: 'dialog' }, [
+        Dom.el('h2', { class: 'dialog__title' }),
         messageEl,
-        Dom.el('div', { class: 'confirm__actions' }, [cancelBtn, acceptBtn])
+        Dom.el('div', { class: 'dialog__actions' }, [cancelBtn, acceptBtn])
       ])
     ]);
 
@@ -52,7 +52,7 @@
       if (event.key === 'Escape' && dialog.classList.contains('is-open')) close(false);
     });
 
-    ui = { dialog: dialog, messageEl: messageEl, titleEl: dialog.querySelector('.confirm__title'), acceptBtn: acceptBtn };
+    ui = { dialog: dialog, messageEl: messageEl, titleEl: dialog.querySelector('.dialog__title'), acceptBtn: acceptBtn };
     return ui;
   }
 

@@ -157,6 +157,123 @@
     ]);
   }
 
+  /*
+   * Grupo de borde, compartido por los tipos de trabajo que lo necesiten.
+   *
+   * El borde puede vivir en cualquier parte del trabajo (en mosaico está en
+   * job.image, que es común; en texto está en job.params), así que el grupo
+   * no sabe dónde está: recibe el objeto y una función para guardar.
+   *
+   *   Fields.borderGroup({
+   *     title: 'Borde de cada pieza',
+   *     focusPrefix: 'mosaic',
+   *     styleOptions: Defaults.BORDER_STYLES,
+   *     border: job.image.border,
+   *     hint: 'El borde va incluido en la medida de la pieza.',
+   *     onChange: function (mutate) { ... }
+   *   })
+   */
+  function borderGroup(config) {
+    var border = config.border;
+
+    function mutate(mutator) {
+      config.onChange(function (draft) { mutator(draft); });
+    }
+
+    var children = [checkbox({
+      label: 'Activar borde',
+      checked: border.enabled,
+      onChange: function (enabled) { mutate(function (draft) { draft.enabled = enabled; }); }
+    })];
+
+    if (border.enabled) {
+      children.push(row([
+        numberField({
+          label: 'Grosor',
+          unit: 'mm',
+          min: 0,
+          step: 0.1,
+          value: border.widthMm,
+          focusKey: config.focusPrefix + '-border-width',
+          onInput: function (value) { mutate(function (draft) { draft.widthMm = value; }); }
+        }),
+        selectField({
+          label: 'Estilo',
+          options: config.styleOptions,
+          value: border.style,
+          focusKey: config.focusPrefix + '-border-style',
+          onChange: function (style) { mutate(function (draft) { draft.style = style; }); }
+        })
+      ]));
+
+      children.push(colorField({
+        label: 'Color',
+        value: border.color,
+        focusKey: config.focusPrefix + '-border-color',
+        onInput: function (color) { mutate(function (draft) { draft.color = color; }); }
+      }));
+
+      if (config.hint) children.push(Dom.el('p', { class: 'field__hint', text: config.hint }));
+    }
+
+    return group(config.title, children);
+  }
+
+  /*
+   * Campos numéricos con unidad.
+   *
+   * Todo se guarda en milímetros, así que estos dos son los que casi siempre
+   * se usan: uno muestra el valor en mm y el otro lo muestra en cm (que es
+   * como piensa la persona que prepara una impresión).
+   */
+  function mmField(config) {
+    return numberField({
+      label: config.label,
+      unit: 'mm',
+      min: config.min === undefined ? 0 : config.min,
+      max: config.max,
+      step: config.step === undefined ? 0.1 : config.step,
+      value: config.mm === undefined ? config.value : U.mmToFixed(config.mm, 2),
+      focusKey: config.focusKey,
+      disabled: config.disabled,
+      hint: config.hint,
+      onInput: config.onInput
+    });
+  }
+
+  function cmField(config) {
+    return numberField({
+      label: config.label,
+      unit: 'cm',
+      min: config.min === undefined ? 0.1 : config.min,
+      max: config.max,
+      step: config.step === undefined ? 0.1 : config.step,
+      value: U.mmToCm(config.mm === undefined ? config.value : config.mm),
+      focusKey: config.focusKey,
+      disabled: config.disabled,
+      hint: config.hint,
+      onInput: function (cm) { config.onInput(U.cmToMm(cm)); }
+    });
+  }
+
+  function textareaField(config) {
+    var area = Dom.el('textarea', {
+      class: 'field__textarea',
+      rows: config.rows || 4,
+      'aria-label': config.label,
+      'data-focus-key': config.focusKey,
+      on: {
+        input: function (event) { config.onInput(event.target.value); }
+      }
+    });
+    area.value = config.value || '';
+
+    return Dom.el('label', { class: 'field' }, [
+      Dom.el('span', { class: 'field__label', text: config.label }),
+      area
+    ]);
+  }
+
   Impresion.Fields = {
     group: group,
     row: row,
@@ -166,6 +283,10 @@
     sliderField: sliderField,
     selectField: selectField,
     colorField: colorField,
+    textareaField: textareaField,
+    borderGroup: borderGroup,
+    mmField: mmField,
+    cmField: cmField,
     autoSelect: autoSelect
   };
 })(window);

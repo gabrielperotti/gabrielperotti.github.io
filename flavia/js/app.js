@@ -14,11 +14,10 @@
   var Images = Impresion.ImageStore;
   var Confirm = Impresion.Confirm;
   var Toast = Impresion.Toast;
+  var TypePicker = Impresion.TypePicker;
   var Preview = Impresion.Preview;
   var EventsPanel = Impresion.EventsPanel;
   var JobsPanel = Impresion.JobsPanel;
-
-  var NEW_JOB_TYPE = 'mosaic'; // único tipo en esta versión
 
   var ctx = {
     store: Store,
@@ -73,9 +72,14 @@
   function onNewJob() {
     var event = Store.getSelectedEvent();
     if (!event) return;
-    Store.createJob(event.id, NEW_JOB_TYPE);
-    var input = elements.jobList.querySelector('.is-selected .list-item__title');
-    if (input) { input.focus(); input.select(); }
+
+    // Se elige el tipo en un selector; el trabajo se crea con el que se elija.
+    TypePicker.open().then(function (typeId) {
+      if (!typeId) return;
+      Store.createJob(event.id, typeId);
+      var input = elements.jobList.querySelector('.is-selected .list-item__title');
+      if (input) { input.focus(); input.select(); }
+    });
   }
 
   function boot() {

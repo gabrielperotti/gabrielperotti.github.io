@@ -358,6 +358,19 @@ input[type="color"] {
 input[type="checkbox"] { accent-color: var(--accent); }
 .checkbox { display: flex; align-items: center; gap: 8px; cursor: pointer; }
 
+.field__textarea {
+  width: 100%;
+  padding: 8px 9px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: var(--panel-2);
+  color: var(--text);
+  font: inherit;
+  resize: vertical;
+}
+
+.field__textarea:focus { outline: none; border-color: var(--accent); }
+
 .field-file {
   flex: 1;
   min-width: 0;
@@ -521,9 +534,35 @@ input[type="checkbox"] { accent-color: var(--accent); }
   border-radius: 2px;
 }
 
+/* Bloque de texto (tipo Texto) — medidas reales en mm */
+
+.text-block {
+  position: absolute;
+  box-sizing: border-box;
+  display: flex;
+  overflow: hidden;
+  padding: 2mm;
+}
+
+.text-block__inner {
+  width: 100%;
+  overflow-wrap: break-word;
+  word-break: break-word;
+}
+
+/* Sin texto escrito se ve la caja vacía, pero en pantalla nomás. */
+.text-block--empty {
+  background: #eef0f4;
+  outline: 1px dashed #c3cad6;
+  outline-offset: -1px;
+}
+
 /* ------------------------------------------------------ Confirmación / avisos */
 
-.confirm {
+/* Capa de diálogo compartida por el modal de confirmar y el selector de tipo.
+   Cada uno lleva además su clase propia (confirm / picker) para poder
+   distinguirlos al consultarlos. */
+.overlay {
   position: fixed;
   top: 0;
   right: 0;
@@ -537,9 +576,9 @@ input[type="checkbox"] { accent-color: var(--accent); }
   z-index: 50;
 }
 
-.confirm.is-open { display: flex; }
+.overlay.is-open { display: flex; }
 
-.confirm__box {
+.dialog {
   width: min(430px, 100%);
   padding: 20px;
   border: 1px solid var(--line-strong);
@@ -548,11 +587,46 @@ input[type="checkbox"] { accent-color: var(--accent); }
   box-shadow: 0 22px 60px rgba(0, 0, 0, 0.6);
 }
 
-.confirm__title { margin: 0 0 8px; font-size: 16px; }
+.dialog__title { margin: 0 0 8px; font-size: 16px; }
 
-.confirm__message { margin: 0 0 18px; color: var(--muted); }
+.dialog__message { margin: 0 0 18px; color: var(--muted); }
 
-.confirm__actions { display: flex; justify-content: flex-end; gap: 8px; }
+.dialog__actions { display: flex; justify-content: flex-end; gap: 8px; }
+
+/* Selector de tipo de trabajo */
+
+.picker__box { width: min(480px, 100%); }
+
+.picker__list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0 0 18px;
+}
+
+.picker__option {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 11px 13px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
+  background: var(--panel-2);
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.12s ease, background 0.12s ease;
+}
+
+.picker__option:hover {
+  border-color: var(--accent);
+  background: #2f2a3b;
+}
+
+.picker__label { font-weight: 600; }
+
+.picker__description { color: var(--muted); font-size: 12.5px; }
 
 .toast {
   position: fixed;
