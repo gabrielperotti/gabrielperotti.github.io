@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Impresión · Composiciones A4</title>
+
+  <!-- Rutas relativas: la app puede vivir en cualquier subcarpeta. -->
+  <link rel="stylesheet" href="css/styles.css">
+  <link rel="stylesheet" href="css/print.css">
+</head>
+<body>
+  <div class="app" id="app">
+
+    <!-- Eventos / proyectos -->
+    <aside class="panel app__sidebar no-print">
+      <header class="panel__header">
+        <h1 class="panel__title">Eventos</h1>
+        <button type="button" class="btn btn--primary" id="new-event">Nuevo evento</button>
+      </header>
+      <div class="panel__body">
+        <ul class="list" id="event-list"></ul>
+        <p class="empty" id="events-empty"></p>
+      </div>
+    </aside>
+
+    <!-- Trabajos del evento seleccionado -->
+    <section class="panel app__jobs no-print">
+      <header class="panel__header">
+        <h2 class="panel__title">Trabajos</h2>
+        <button type="button" class="btn btn--primary" id="new-job">Nuevo trabajo</button>
+      </header>
+      <div class="panel__body">
+        <ul class="list" id="job-list"></ul>
+        <p class="empty" id="jobs-empty"></p>
+      </div>
+    </section>
+
+    <!-- Configuración del trabajo seleccionado -->
+    <section class="panel app__config no-print">
+      <header class="panel__header">
+        <h2 class="panel__title">Configuración</h2>
+      </header>
+      <div class="panel__body">
+        <div class="form" id="job-form"></div>
+      </div>
+    </section>
+
+    <!-- Previsualización de la hoja -->
+    <main class="app__main">
+      <div class="preview" id="preview">
+        <div class="preview__toolbar no-print">
+          <span class="preview__hint">Hoja real en mm · escalada para entrar en pantalla</span>
+          <span class="preview__zoom" id="preview-zoom"></span>
+          <button type="button" class="btn btn--primary" id="print">Imprimir</button>
+        </div>
+
+        <div class="preview__stage" id="preview-stage">
+          <div class="preview__frame" id="preview-frame">
+            <div class="preview__scaler" id="preview-scaler">
+              <div class="sheet" id="sheet">
+                <div class="sheet__printable" id="sheet-printable"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+
+  </div>
+
+  <!-- El orden define las dependencias: cada archivo publica en window.Impresion -->
+  <script src="js/utils/units.js"></script>
+  <script src="js/core/dom.js"></script>
+  <script src="js/core/paper.js"></script>
+  <script src="js/storage/local-storage.js"></script>
+  <script src="js/storage/image-storage.js"></script>
+  <script src="js/mosaic/mosaic-defaults.js"></script>
+  <script src="js/mosaic/mosaic-calculator.js"></script>
+  <script src="js/mosaic/mosaic-renderer.js"></script>
+  <script src="js/ui/fields.js"></script>
+  <script src="js/ui/toast.js"></script>
+  <script src="js/mosaic/mosaic-form.js"></script>
+  <script src="js/jobs/job-types.js"></script>
+  <script src="js/core/store.js"></script>
+  <script src="js/ui/confirm.js"></script>
+  <script src="js/ui/preview.js"></script>
+  <script src="js/ui/events-panel.js"></script>
+  <script src="js/ui/jobs-panel.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

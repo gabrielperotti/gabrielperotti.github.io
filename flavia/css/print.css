@@ -1,0 +1,72 @@
+/* =========================================================================
+   Impresión: sale SÓLO la hoja.
+   La regla @page con la orientación la inyecta js/ui/preview.js.
+   ========================================================================= */
+
+@page {
+  margin: 0;
+}
+
+@media print {
+  html, body {
+    height: auto;
+    overflow: visible;
+    background: #fff;
+  }
+
+  /* Todo lo que no es la hoja */
+  .no-print,
+  .app__sidebar,
+  .app__jobs,
+  .app__config {
+    display: none !important;
+  }
+
+  .app {
+    display: block;
+    height: auto;
+  }
+
+  .app__main { padding: 0; overflow: visible; }
+
+  .preview {
+    height: auto;
+    gap: 0;
+    background: #fff;
+  }
+
+  .preview__stage {
+    display: block;
+    overflow: visible;
+    padding: 0;
+    background: #fff;
+  }
+
+  /* La hoja vuelve a su tamaño real: 1 mm en pantalla = 1 mm impreso. */
+  .preview__frame {
+    width: auto !important;
+    height: auto !important;
+    margin: 0;
+  }
+
+  .preview__scaler {
+    transform: none !important;
+  }
+
+  .sheet {
+    margin: 0;
+    border: 0;
+    box-shadow: none !important;
+  }
+
+  /* Sin imagen no hay placeholder: se imprime la pieza vacía (útil para cortar). */
+  .piece__placeholder {
+    display: none !important;
+  }
+
+  /* Bordes, círculos y colores de fondo deben salir impresos. */
+  * {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+}
