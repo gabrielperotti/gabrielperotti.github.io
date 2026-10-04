@@ -13,6 +13,7 @@
   var Confirm = Impresion.Confirm;
 
   var refs = null;
+  var renderedEventId = null; // de qué evento es la lista que hay en pantalla
 
   function buildItem(job, ctx) {
     var isSelected = job.id === ctx.store.getState().selection.jobId;
@@ -23,6 +24,8 @@
       'aria-label': 'Título del trabajo',
       'data-focus-key': 'job-title-' + job.id,
       on: {
+        // Seguro: seleccionar ya no re-renderiza la lista, así que este input
+        // no se destruye al momento de escribir.
         focus: function () { ctx.store.selectJob(job.id); },
         input: function (event) { ctx.store.updateJobTitle(job.id, event.target.value); }
       }
@@ -30,7 +33,15 @@
 
     return Dom.el('li', {
       class: 'list-item' + (isSelected ? ' is-selected' : ''),
-      on: { mousedown: function () { ctx.store.selectJob(job.id); } }
+      'data-job-id': job.id,
+      // click y no mousedown: mousedown dispararía la selección antes de que
+      // el navegador empiece a escribir en el input del título.
+      on: {
+        click: function (clickEvent) {
+          if (clickEvent.target === titleInput) return; // ya se edita en el lugar
+          ctx.store.selectJob(job.id);
+        }
+      }
     }, [
       Dom.el('div', { class: 'list-item__main' }, [
         titleInput,
@@ -76,10 +87,33 @@
     ]);
   }
 
+  /*
+   * Cambiar la selección NO reconstruye la lista: sólo mueve la clase.
+   * Si no, el input donde se está escribiendo se destruye en el medio de la
+   * escritura (el texto se va al nodo viejo y el usuario pierde el cursor).
+   * La excepción es cambiar de evento: ahí la lista muestra otros trabajos y
+   * sí hay que repintarla.
+   */
+  function updateSelection(ctx) {
+    if (!refs) return;
+
+    var event = ctx.store.getSelectedEvent();
+    if ((event ? event.id : null) !== renderedEventId) {
+      render(ctx);
+      return;
+    }
+
+    var selectedId = ctx.store.getState().selection.jobId;
+    Array.prototype.forEach.call(refs.list.children, function (item) {
+      item.classList.toggle('is-selected', item.getAttribute('data-job-id') === selectedId);
+    });
+  }
+
   function render(ctx) {
     if (!refs) return;
 
     var event = ctx.store.getSelectedEvent();
+    renderedEventId = event ? event.id : null;
     Dom.clear(refs.empty);
 
     if (!event) {
@@ -109,6 +143,7 @@
 
   Impresion.JobsPanel = {
     init: function (elements) { refs = elements; },
-    render: render
+    render: render,
+    updateSelection: updateSelection
   };
 })(window);

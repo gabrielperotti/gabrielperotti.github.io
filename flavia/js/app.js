@@ -41,9 +41,17 @@
   }
 
   function onStoreChange(scope) {
-    if (scope === 'events' || scope === 'selection') EventsPanel.render(ctx);
+    if (scope === 'events') {
+      EventsPanel.render(ctx);
+      JobsPanel.render(ctx);
+    } else if (scope === 'selection') {
+      // Sólo mover la marca de selección: si se reconstruyera la lista, el
+      // input de título que el usuario está escribiendo se destruiría.
+      EventsPanel.updateSelection(ctx);
+      JobsPanel.updateSelection(ctx);
+    }
 
-    if (scope === 'jobs' || scope === 'selection' || scope === 'job-title') JobsPanel.render(ctx);
+    if (scope === 'jobs') JobsPanel.render(ctx);
 
     // 'params' es el cambio en vivo: la hoja se repinta sola.
     if (scope === 'params' || scope === 'events' || scope === 'jobs' || scope === 'selection') {

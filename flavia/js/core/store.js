@@ -143,7 +143,9 @@
       if (!event) return;
       event.title = title;
       saveEvents();
-      notify('events');
+      // Ámbito aparte de 'events' a propósito: renombrar no cambia la lista,
+      // y re-renderizarla destruiría el input que se está escribiendo.
+      notify('event-title');
     },
 
     // Devuelve los imageIds que quedaron huérfanos para que la app los borre.

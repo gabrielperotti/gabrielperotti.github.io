@@ -29,8 +29,12 @@
       'aria-label': 'Título del evento',
       'data-focus-key': 'event-title-' + event.id,
       on: {
+        // Seguro: seleccionar ya no re-renderiza la lista, así que este input
+        // no se destruye al momento de escribir.
         focus: function () { ctx.store.selectEvent(event.id); },
         input: function (inputEvent) {
+          // No re-renderizamos: se actualiza el dato y nada más, así el
+          // cursor no se pierde nunca mientras se escribe.
           ctx.store.renameEvent(event.id, inputEvent.target.value);
         }
       }
@@ -62,7 +66,15 @@
 
     return Dom.el('li', {
       class: 'list-item' + (isSelected ? ' is-selected' : ''),
-      on: { mousedown: function () { ctx.store.selectEvent(event.id); } }
+      'data-event-id': event.id,
+      // click y no mousedown: mousedown dispararía la selección antes de que
+      // el navegador empiece a escribir en el input del título.
+      on: {
+        click: function (clickEvent) {
+          if (clickEvent.target === titleInput) return; // ya se edita en el lugar
+          ctx.store.selectEvent(event.id);
+        }
+      }
     }, [
       Dom.el('div', { class: 'list-item__main' }, [
         titleInput,
@@ -73,6 +85,19 @@
       ]),
       deleteBtn
     ]);
+  }
+
+  /*
+   * Cambiar la selección NO reconstruye la lista: sólo mueve la clase.
+   * Si no, el input donde se está escribiendo se destruye en el medio de la
+   * escritura (el texto se va al nodo viejo y el usuario pierde el cursor).
+   */
+  function updateSelection(ctx) {
+    if (!refs) return;
+    var selectedId = ctx.store.getState().selection.eventId;
+    Array.prototype.forEach.call(refs.list.children, function (item) {
+      item.classList.toggle('is-selected', item.getAttribute('data-event-id') === selectedId);
+    });
   }
 
   function render(ctx) {
@@ -99,6 +124,7 @@
 
   Impresion.EventsPanel = {
     init: function (elements) { refs = elements; },
-    render: render
+    render: render,
+    updateSelection: updateSelection
   };
 })(window);
