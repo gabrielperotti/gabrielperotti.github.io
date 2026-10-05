@@ -105,7 +105,7 @@
     var events = ctx.store.getEvents();
     var selectedEvent = ctx.store.getSelectedEvent();
 
-    Dom.keepFocus(refs.list, function () {
+    Dom.keepContext(refs.list, function () {
       Dom.clear(refs.list);
       events.forEach(function (event) { refs.list.appendChild(buildItem(event, ctx)); });
     });

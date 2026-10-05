@@ -377,8 +377,10 @@
     if (!job) {
       mounted = { jobId: null, structure: null };
       summaryEl = null;
-      Dom.clear(container);
-      container.appendChild(Dom.el('p', { class: 'empty', text: 'Elegí un trabajo para configurarlo.' }));
+      Dom.keepContext(container, function () {
+        Dom.clear(container);
+        container.appendChild(Dom.el('p', { class: 'empty', text: 'Elegí un trabajo para configurarlo.' }));
+      });
       return;
     }
 
@@ -395,21 +397,25 @@
     }
     mounted = { jobId: job.id, structure: structure };
 
-    Dom.clear(container);
-    summaryEl = Dom.el('p', { class: 'form-summary', text: Calculator.describe(job) });
-    container.appendChild(summaryEl);
+    // El re-render completo va dentro de keepContext para que el panel no salte
+    // al scroll de arriba cuando se activa algo que agrega o saca campos.
+    Dom.keepContext(container, function () {
+      Dom.clear(container);
+      summaryEl = Dom.el('p', { class: 'form-summary', text: Calculator.describe(job) });
+      container.appendChild(summaryEl);
 
-    [
-      buildImageGroup(job, ctx),
-      buildPageGroup(job, ctx),
-      buildShapeGroup(job, ctx),
-      buildFitGroup(job, ctx),
-      buildRotationGroup(job, ctx),
-      buildBorderGroup(job, ctx),
-      buildSpacingGroup(job, ctx),
-      buildMarginsGroup(job, ctx),
-      buildCountGroup(job, ctx)
-    ].forEach(function (node) { container.appendChild(node); });
+      [
+        buildImageGroup(job, ctx),
+        buildPageGroup(job, ctx),
+        buildShapeGroup(job, ctx),
+        buildFitGroup(job, ctx),
+        buildRotationGroup(job, ctx),
+        buildBorderGroup(job, ctx),
+        buildSpacingGroup(job, ctx),
+        buildMarginsGroup(job, ctx),
+        buildCountGroup(job, ctx)
+      ].forEach(function (node) { container.appendChild(node); });
+    });
   }
 
   Mosaic.Form = { render: render };

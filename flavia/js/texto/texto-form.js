@@ -170,6 +170,8 @@
       F.checkbox({
         label: 'Fondo de color',
         checked: hasBackground,
+        // reconstruct → necesita clave para recuperar el foco
+        focusKey: 'texto-background-toggle',
         onChange: function (enabled) {
           ctx.store.updateJobParams(job.id, function (draft) {
             draft.background = enabled ? (draft.background || '#ffe3ef') : '';
@@ -238,8 +240,10 @@
     if (!job) {
       mounted = { jobId: null, structure: null };
       summaryEl = null;
-      Dom.clear(container);
-      container.appendChild(Dom.el('p', { class: 'empty', text: 'Elegí un trabajo para configurarlo.' }));
+      Dom.keepContext(container, function () {
+        Dom.clear(container);
+        container.appendChild(Dom.el('p', { class: 'empty', text: 'Elegí un trabajo para configurarlo.' }));
+      });
       return;
     }
 
@@ -254,29 +258,33 @@
     }
     mounted = { jobId: job.id, structure: structure };
 
-    Dom.clear(container);
+    // El re-render completo va dentro de keepContext para que el panel no salte
+    // al scroll de arriba cuando se activa algo que agrega o saca campos.
+    Dom.keepContext(container, function () {
+      Dom.clear(container);
 
-    summaryEl = Dom.el('p', { class: 'form-summary', text: describe(job) });
-    container.appendChild(summaryEl);
+      summaryEl = Dom.el('p', { class: 'form-summary', text: describe(job) });
+      container.appendChild(summaryEl);
 
-    // Orientación de la hoja: ajuste común, no del tipo.
-    container.appendChild(F.group('Hoja', [
-      F.radioGroup({
-        label: 'Orientación',
-        options: Paper.ORIENTATIONS,
-        value: job.settings.orientation,
-        onChange: function (orientation) {
-          ctx.store.updateJobSettings(job.id, { orientation: orientation });
-        }
-      })
-    ]));
+      // Orientación de la hoja: ajuste común, no del tipo.
+      container.appendChild(F.group('Hoja', [
+        F.radioGroup({
+          label: 'Orientación',
+          options: Paper.ORIENTATIONS,
+          value: job.settings.orientation,
+          onChange: function (orientation) {
+            ctx.store.updateJobSettings(job.id, { orientation: orientation });
+          }
+        })
+      ]));
 
-    [
-      buildTextGroup(job, ctx),
-      buildFontGroup(job, ctx),
-      buildAlignGroup(job, ctx),
-      buildBlockGroup(job, ctx)
-    ].forEach(function (node) { container.appendChild(node); });
+      [
+        buildTextGroup(job, ctx),
+        buildFontGroup(job, ctx),
+        buildAlignGroup(job, ctx),
+        buildBlockGroup(job, ctx)
+      ].forEach(function (node) { container.appendChild(node); });
+    });
   }
 
   Texto.Form = { render: render };

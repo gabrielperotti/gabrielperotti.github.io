@@ -128,7 +128,7 @@
 
     var jobs = ctx.store.getJobs(event.id);
 
-    Dom.keepFocus(refs.list, function () {
+    Dom.keepContext(refs.list, function () {
       Dom.clear(refs.list);
       jobs.forEach(function (job) { refs.list.appendChild(buildItem(job, ctx)); });
     });

@@ -60,22 +60,51 @@
   }
 
   /*
-   * Ejecuta un re-render sin perder el foco ni la posición del cursor.
-   * Cada input queEditable lleva un data-focus-key único.
+   * El contenedor con scroll que contiene al nodo (el panel, normalmente).
    */
-  function keepFocus(container, render) {
+  function scrollParent(node) {
+    var current = node ? node.parentElement : null;
+    while (current && current !== document.body && current !== document.documentElement) {
+      var style = global.getComputedStyle(current);
+      if (/(auto|scroll)/.test(style.overflowY) && current.scrollHeight > current.clientHeight) {
+        return current;
+      }
+      current = current.parentElement;
+    }
+    return null;
+  }
+
+  /*
+   * Ejecuta un re-render sin perder el contexto de quien lo pidió:
+   * el scroll del panel, el foco y la posición del cursor.
+   *
+   * El scroll es lo importante: al vaciar un contenedor con scroll, el
+   * navegador recorta el scrollTop a 0 (el contenido momentáneo es cero), así
+   * que sin esto la pantalla salta arriba cada vez que se activa un campo que
+   * agrega controles (por ejemplo "Activar borde").
+   *
+   * El foco y el cursor se buscan por `data-focus-key`, que lleva cada control
+   * editable. Si el elemento enfocado no tiene esa clave, se deja el foco donde
+   * esté en vez de adivinar.
+   */
+  function keepContext(container, render) {
+    var scroller = scrollParent(container);
+    // Se captura ANTES: después del render ya vale 0 y no hay nada que recuperar.
+    var scrollTop = scroller ? scroller.scrollTop : 0;
+
     var active = document.activeElement;
-    var key = (active && container && container.contains(active))
-      ? active.getAttribute('data-focus-key')
-      : null;
+    var hasFocus = !!(active && container && container.contains(active));
+    var key = hasFocus ? active.getAttribute('data-focus-key') : null;
     var start = null;
     var end = null;
-    if (key !== null && active.selectionStart !== undefined) {
+    if (hasFocus && key !== null && active.selectionStart !== undefined) {
       start = active.selectionStart;
       end = active.selectionEnd;
     }
 
     render();
+
+    if (scroller && scrollTop > 0) scroller.scrollTop = scrollTop;
 
     if (key === null) return;
     var restored = container.querySelector('[data-focus-key="' + key + '"]');
@@ -89,6 +118,7 @@
   Impresion.Dom = {
     el: el,
     clear: clear,
-    keepFocus: keepFocus
+    scrollParent: scrollParent,
+    keepContext: keepContext
   };
 })(window);

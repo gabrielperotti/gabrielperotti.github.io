@@ -60,6 +60,7 @@
       Dom.el('input', {
         type: 'checkbox',
         checked: !!config.checked,
+        'data-focus-key': config.focusKey,
         on: { change: function (event) { config.onChange(event.target.checked); } }
       }),
       Dom.el('span', { text: config.label })
@@ -183,6 +184,9 @@
     var children = [checkbox({
       label: 'Activar borde',
       checked: border.enabled,
+      // Al activar o desactivar se reconstruye el formulario, así que este
+      // checkbox necesita una clave para recuperar el foco.
+      focusKey: config.focusPrefix + '-border-toggle',
       onChange: function (enabled) { mutate(function (draft) { draft.enabled = enabled; }); }
     })];
 
