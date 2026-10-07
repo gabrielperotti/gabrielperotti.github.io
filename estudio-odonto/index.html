@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Informe de Paciente</title>
+
+    <link rel="stylesheet" href="styles.css">
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+</head>
+
+<body>
+
+    <div class="app">
+
+        <aside class="sidebar">
+
+            <div class="sidebar-header">
+                <h1>Informe</h1>
+                <p>Complete los datos y agregue las imágenes.</p>
+            </div>
+
+            <div class="form-group establishment-group">
+                <label for="establecimiento">Establecimiento</label>
+                <input id="establecimiento" type="text" placeholder="Nombre del establecimiento">
+                <small>Este dato quedará guardado.</small>
+            </div>
+
+            <div class="form-group">
+                <label for="paciente">Paciente</label>
+                <input id="paciente" type="text" placeholder="Nombre y apellido">
+            </div>
+
+            <div class="form-group">
+                <label for="fecha">Fecha</label>
+                <input id="fecha" type="date">
+            </div>
+
+            <div class="form-group">
+                <label for="dni">DNI</label>
+                <input id="dni" type="text" placeholder="DNI del paciente">
+            </div>
+
+            <div class="form-group">
+                <label for="profesional">Profesional</label>
+                <input id="profesional" type="text" placeholder="Nombre del profesional">
+            </div>
+
+            <div class="form-group">
+                <label for="observaciones">Observaciones</label>
+                <textarea id="observaciones" rows="5" placeholder="Observaciones..."></textarea>
+            </div>
+
+            <div class="form-group">
+                <label>Imágenes</label>
+
+                <label class="upload-button">
+                    + Seleccionar imágenes
+                    <input id="imagenes" type="file" accept="image/*" multiple hidden>
+                </label>
+
+                <div id="listaImagenes" class="image-list">
+                    <div class="empty-images">
+                        No hay imágenes seleccionadas
+                    </div>
+                </div>
+            </div>
+
+        </aside>
+
+
+        <main class="main">
+
+            <div class="toolbar">
+
+                <div>
+                    <strong>Vista previa</strong>
+                    <span id="contadorImagenes">0 imágenes</span>
+                </div>
+
+                <div class="toolbar-actions">
+
+                    <button id="btnLimpiar" class="btn btn-clear">
+                        Limpiar
+                    </button>
+
+                    <button id="btnPdf" class="btn btn-secondary">
+                        Descargar PDF
+                    </button>
+
+                    <button id="btnImprimir" class="btn btn-secondary">
+                        Imprimir
+                    </button>
+
+                    <!-- <button id="btnWhatsapp" class="btn btn-whatsapp">
+                        Compartir por WhatsApp
+                    </button> -->
+
+                </div>
+
+            </div>
+
+
+            <div class="preview-container">
+
+                <div id="documento" class="document">
+
+                    <header class="document-header">
+
+                        <h1 id="previewEstablecimiento" class="document-establishment">
+                            Establecimiento
+                        </h1>
+
+                        <div class="document-title">
+                            <h2>Informe del paciente</h2>
+                            <p id="previewFecha"></p>
+                        </div>
+
+                    </header>
+
+                    <section class="patient-data">
+
+                        <div>
+                            <span>Paciente</span>
+                            <strong id="previewPaciente">—</strong>
+                        </div>
+
+                        <div>
+                            <span>DNI</span>
+                            <strong id="previewDni">—</strong>
+                        </div>
+
+                        <div>
+                            <span>Profesional</span>
+                            <strong id="previewProfesional">—</strong>
+                        </div>
+
+                    </section>
+
+                    <section class="observations">
+                        <h3>Observaciones</h3>
+                        <p id="previewObservaciones">—</p>
+                    </section>
+
+                    <section id="previewImagenes" class="preview-images">
+
+                        <div class="preview-empty">
+
+                            <div class="preview-empty-icon">
+                                🖼️
+                            </div>
+
+                            <strong>Todavía no hay imágenes</strong>
+
+                            <span>
+                                Seleccione las imágenes desde el panel izquierdo.
+                            </span>
+
+                        </div>
+
+                    </section>
+
+                </div>
+
+            </div>
+
+        </main>
+
+    </div>
+
+    <script src="app.js"></script>
+
+</body>
+
+</html>
