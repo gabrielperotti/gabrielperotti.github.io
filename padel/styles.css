@@ -1,0 +1,796 @@
+/* Padel Scores. Sin build: esto es lo que se despliega.
+   Pensado para una pantalla de teléfono al aire libre: contraste alto, botones grandes,
+   marcador siempre arriba y nada que requiera scroll para registrar un punto. */
+
+:root {
+  color-scheme: dark;
+
+  /* Fondo oscuro con texto claro: se lee mejor al sol que un tema claro en un teléfono
+     con brillo al máximo. */
+  --fondo: #101418;
+  --fondo-2: #191f26;
+  --fondo-3: #232c35;
+  --linea: #35414d;
+
+  --texto: #f4f7fa;
+  --texto-2: #9fb0c0;
+  --texto-3: #93a5b5; /* 6,1:1 sobre --fondo-2. Antes estaba en 3,9:1. */
+
+  --equipo-a: #4aa8ff;
+  --equipo-b: #ffa64a;
+
+  --verde: #1fb865;
+  --verde-2: #17a058;
+  --rojo: #e0343c;
+  --rojo-2: #c22a32;
+  --aviso: #ffd23d;
+
+  --radio: 12px;
+  --gap: 8px;
+
+  /* Todos los tamaños grandes se escalan con el ancho de la pantalla, así el layout
+     se ve igual en un teléfono chico y en uno grande. */
+  --alto-boton: clamp(52px, 15vh, 76px);
+  /* Ninguna zona táctil baja de 44px: se usa con el pulgar, sin Colossal Dedos. */
+  --tam-resultado: clamp(44px, 13vw, 54px);
+  --lateral: clamp(10px, 3vw, 20px);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+/* Cualquier `display` de las clases de abajo pisa al `[hidden]` del navegador, y entonces
+   una vista "oculta" se sigue viendo. Esta regla manda sobre todas. */
+[hidden] {
+  display: none !important;
+}
+
+html,
+body {
+  margin: 0;
+  height: 100%;
+  overflow: hidden; /* Sin scroll: todo el flujo tiene que caber en pantalla. */
+}
+
+body {
+  background: var(--fondo);
+  color: var(--texto);
+  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  font-size: clamp(15px, 4vw, 18px);
+  -webkit-text-size-adjust: 100%;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.app {
+  display: flex;
+  flex-direction: column;
+  height: 100dvh;
+  padding: max(var(--lateral), env(safe-area-inset-top)) var(--lateral)
+    max(var(--lateral), env(safe-area-inset-bottom));
+}
+
+/* ---------------------------------------------------------------- botones base */
+
+button {
+  font: inherit;
+  color: inherit;
+  background: var(--fondo-3);
+  border: 1px solid var(--linea);
+  border-radius: var(--radio);
+  padding: 0 14px;
+  min-height: var(--alto-boton);
+  cursor: pointer;
+  touch-action: manipulation; /* Sin retardo de 300ms al tocar. */
+}
+
+button:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
+button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.boton-principal {
+  width: 100%;
+  background: var(--verde);
+  border-color: var(--verde-2);
+  color: #05220f;
+  font-weight: 700;
+}
+
+.boton-plano {
+  background: transparent;
+}
+
+/* ---------------------------------------------------------------- creación */
+
+.creacion {
+  display: flex;
+  margin: 0;
+  flex-direction: column;
+  gap: 14px;
+  overflow-y: auto; /* La creación sí puede scrollear: es la única pantalla con scroll. */
+  padding-bottom: 12px;
+}
+
+.creacion h1 {
+  margin: 4px 0 0;
+  font-size: 1.35em;
+}
+
+.creacion__pareja {
+  background: var(--fondo-2);
+  border: 1px solid var(--linea);
+  border-radius: var(--radio);
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.creacion__rotulo {
+  margin: 0;
+  font-size: 0.85em;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--texto-2);
+}
+
+.creacion__pareja--a {
+  border-left: 4px solid var(--equipo-a);
+}
+
+.creacion__pareja--b {
+  border-left: 4px solid var(--equipo-b);
+}
+
+input[type='text'],
+select {
+  font: inherit;
+  color: var(--texto);
+  background: var(--fondo);
+  border: 1px solid var(--linea);
+  border-radius: 10px;
+  padding: 12px;
+  width: 100%;
+  min-height: 48px;
+}
+
+input::placeholder {
+  color: var(--texto-3);
+}
+
+.creacion__opciones {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.campo {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.campo > span {
+  font-size: 0.8em;
+  color: var(--texto-2);
+}
+
+.aviso-mini {
+  margin: 0;
+  font-size: 0.85em;
+  color: var(--texto-2);
+  text-align: center;
+}
+
+/* ---------------------------------------------------------------- marcador */
+
+.partido,
+.fin {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.marcador {
+  background: var(--fondo-2);
+  border: 1px solid var(--linea);
+  border-radius: var(--radio);
+  padding: 8px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 0 0 auto; /* Nunca crece ni se comprime: el marcador está siempre arriba. */
+}
+
+.marcador__sets {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 6px;
+}
+
+.marcador__equipo {
+  font-size: 0.8em;
+  color: var(--texto-2);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.marcador__equipo--b {
+  text-align: right;
+}
+
+.marcador__cuenta {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  font-variant-numeric: tabular-nums;
+}
+
+.marcador__cuenta b {
+  font-size: 1.5em;
+  line-height: 1;
+}
+
+.marcador__cuenta span {
+  color: var(--texto-3);
+}
+
+/* Parciales: los sets, uno por botón, con el en curso destacado. */
+.parciales {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  align-items: center;
+  justify-content: center;
+}
+
+.parcial {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+
+/* Cada número es su propio botón, con 44px de alto: es la única vía de corrección que hay
+   (no hay deshacer), así que hay que poder apuntar el número sin precisar. */
+.parcial button {
+  min-height: 44px;
+  min-width: 42px;
+  padding: 0 6px;
+  font-size: 0.95em;
+  font-variant-numeric: tabular-nums;
+}
+
+.parcial__guion {
+  color: var(--texto-3);
+  font-size: 0.8em;
+  pointer-events: none;
+}
+
+.parcial--en-curso {
+  border-color: var(--texto-2);
+  font-weight: 700;
+}
+
+.parcial--tension {
+  border-color: var(--equipo-b);
+  color: var(--equipo-b);
+  font-weight: 700;
+}
+
+.puntos {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: stretch;
+  gap: 6px;
+}
+
+.punto {
+  min-height: clamp(44px, 12vh, 60px);
+  font-size: 1.5em;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  padding: 0 6px;
+}
+
+.punto--a {
+  border-color: var(--equipo-a);
+  color: var(--equipo-a);
+  justify-self: start;
+  min-width: 84px;
+}
+
+.punto--b {
+  border-color: var(--equipo-b);
+  color: var(--equipo-b);
+  justify-self: end;
+  min-width: 84px;
+}
+
+.punto--etiqueta {
+  font-size: 1em;
+  min-width: 96px;
+}
+
+.puntos__vs {
+  display: grid;
+  place-items: center;
+  color: var(--texto-3);
+  font-size: 0.75em;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.marcador__pie {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  font-size: 0.8em;
+  color: var(--texto-2);
+}
+
+.tie-break-tag {
+  padding: 2px 8px;
+  border: 1px dashed var(--aviso);
+  border-radius: 999px;
+  color: var(--aviso);
+  font-size: 0.9em;
+  letter-spacing: 0.04em;
+}
+
+.aviso-punto {
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--aviso);
+  color: #241a00;
+  font-weight: 700;
+}
+
+.aviso-fin {
+  font-weight: 700;
+  color: var(--verde);
+}
+
+/* ---------------------------------------------------------------- editor inline */
+
+.editor {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+  padding: 6px;
+  background: var(--fondo-3);
+  border: 1px dashed var(--texto-3);
+  border-radius: 10px;
+}
+
+.editor__actual {
+  font-size: 0.8em;
+  color: var(--texto-2);
+  padding-right: 4px;
+}
+
+.editor button {
+  min-height: 46px;
+  min-width: 52px;
+  padding: 0 12px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.editor--vacio {
+  color: var(--texto-3);
+  font-size: 0.85em;
+  justify-content: center;
+  border-style: solid;
+}
+
+/* ---------------------------------------------------------------- cancha */
+
+.cancha {
+  flex: 1 1 auto;
+  min-height: 0; /* Necesario para que flexbox permita achicar dentro de la pantalla. */
+  display: grid;
+  gap: var(--gap);
+  padding: var(--gap);
+  margin-top: var(--gap);
+  background: var(--fondo-2);
+  border: 1px solid var(--linea);
+  border-radius: var(--radio);
+  /* `minmax(0, 1fr)` y no `1fr`: con `1fr` la pista toma como mínimo el min-content del
+     ítem, y un nombre largo inflaba la columna hasta empujar la cancha fuera de pantalla. */
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-rows: 1fr 1fr;
+}
+
+/* La celda es un contenedor: el nombre es el botón y los botones de resultado van encima.
+   Vertical: los 2 de arriba a la izquierda, los 2 de abajo a la derecha (RF-40). */
+.jugador {
+  position: relative;
+  display: flex;
+  align-items: stretch;
+  min-width: 0; /* Como ítem del grid tiene que poder encogerse más allá del min-content. */
+  min-height: var(--alto-boton);
+  border-width: 2px;
+  border-style: solid;
+  border-color: var(--linea);
+}
+
+.jugador__nombre {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  border: 0;
+  border-radius: inherit;
+  background: transparent;
+  font-size: clamp(16px, 5vw, 22px);
+  font-weight: 700;
+  padding: 0 6px;
+}
+
+.jugador--a {
+  border-color: var(--equipo-a);
+  background: color-mix(in srgb, var(--equipo-a) 14%, var(--fondo-2));
+}
+
+.jugador--b {
+  border-color: var(--equipo-b);
+  background: color-mix(in srgb, var(--equipo-b) 14%, var(--fondo-2));
+}
+
+/* Arriba a la izquierda, abajo a la derecha (RF-40). */
+.jugador--arriba .jugador__nombre {
+  justify-content: flex-start;
+}
+
+.jugador--abajo .jugador__nombre {
+  justify-content: flex-end;
+}
+
+.jugador--seleccionado {
+  outline: 3px solid var(--texto);
+  outline-offset: -3px;
+}
+
+/* Con el jugador seleccionado, el nombre se dibuja en el hueco que dejan los dos botones.
+   Este padding ya NO infla la pista del grid: las pistas son minmax(0, 1fr) y el nombre
+   tiene min-width: 0, así que se encoge con puntos suspensivos en vez de empujar la cancha. */
+.jugador--seleccionado .jugador__nombre {
+  padding: 0 calc(var(--tam-resultado) + 4px);
+  justify-content: center;
+  text-align: center;
+}
+
+.jugador__nombre {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Capa de los dos botones: tapa la celda entera sin ocupar lugar en el flujo, así que el
+   nombre no necesita padding y la celda no cambia de tamaño al seleccionar. */
+.jugador__acciones {
+  position: absolute;
+  inset: 0;
+  display: none;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 2px;
+  pointer-events: none; /* Solo los botones reciben el toque. */
+}
+
+.jugador--seleccionado .jugador__acciones {
+  display: flex;
+}
+
+/* Verde y rojo: por encima de la celda, sin ocupar lugar en el flujo. */
+.resultado {
+  width: var(--tam-resultado);
+  height: var(--tam-resultado);
+  min-height: var(--tam-resultado);
+  padding: 0;
+  border-radius: 50%;
+  font-size: clamp(18px, 5vw, 24px);
+  font-weight: 700;
+  display: grid;
+  place-items: center;
+  pointer-events: auto;
+}
+
+.resultado--verde {
+  background: var(--verde);
+  border-color: var(--verde-2);
+  color: #04240f;
+}
+
+.resultado--rojo {
+  background: var(--rojo);
+  border-color: var(--rojo-2);
+  color: #fff;
+}
+
+
+
+
+
+/* ---------------------------------------------------------------- acciones */
+
+.acciones {
+  flex: 0 0 auto;
+  display: flex;
+  gap: 6px;
+  margin-top: var(--gap);
+}
+
+.acciones button {
+  flex: 1 1 0;
+  min-height: 48px;
+  font-size: 0.9em;
+}
+
+.acciones .peligro {
+  border-color: var(--rojo-2);
+  color: #ff8d92;
+}
+
+/* ---------------------------------------------------------------- modal */
+
+.capa-modal {
+  position: fixed;
+  inset: 0;
+  /* Velo suave a propósito: con 78% el marcador quedaba en 1,7:1 de contraste, ilegible.
+     30% mantiene la separación sin arruinar lo que hay detrás. */
+  background: rgb(0 0 0 / 30%);
+  display: flex;
+  align-items: stretch;
+  justify-content: center;
+  z-index: 10;
+  padding: max(12px, env(safe-area-inset-top)) 12px max(12px, env(safe-area-inset-bottom));
+}
+
+.capa-modal[hidden] {
+  display: none;
+}
+
+.modal {
+  align-self: flex-end;
+  width: 100%;
+  max-width: 560px;
+  max-height: 100%;
+  overflow-y: auto;
+  background: var(--fondo-2);
+  border: 1px solid var(--linea);
+  border-radius: 18px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.modal__titulo {
+  margin: 0;
+  font-size: 1em;
+  color: var(--texto-2);
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.modal__movimientos {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.modal__movimientos button {
+  min-height: clamp(54px, 11vh, 72px);
+  font-size: 1em;
+  font-weight: 600;
+}
+
+.modal__descartar {
+  width: 100%;
+  background: transparent;
+  color: var(--texto-2);
+  min-height: 46px;
+}
+
+/* ---------------------------------------------------------------- fin */
+
+.fin {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  height: 100%;
+  min-height: 0;
+}
+
+.fin h2 {
+  margin: 0;
+  font-size: 1.1em;
+  flex: 0 0 auto;
+}
+
+/* Lugar donde se muda el marcador en la pantalla de fin. `block` y no `flex`: como fila,
+   el marcador se encogía al ancho de su contenido. */
+.fin__marcador {
+  display: block;
+  flex: 0 0 auto;
+}
+
+.resumen {
+  flex: 1 1 auto;
+  min-height: 80px;
+  overflow-y: auto;
+  background: var(--fondo);
+  border: 1px solid var(--linea);
+  border-radius: var(--radio);
+  padding: 12px;
+  white-space: pre-wrap;
+  font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+  font-size: 0.85em;
+  line-height: 1.45;
+  user-select: text;
+}
+
+/* ---------------------------------------------------------------- horizontal */
+
+/* Horizontal: 2 jugadores por lado con la red en el medio (RF-39).
+   Todo el estado vive en app.js, así que rotar no pierde nada (RF-41). */
+@media (orientation: landscape) {
+  :root {
+    --alto-boton: clamp(44px, 11vh, 62px);
+  }
+
+  /* En horizontal la pantalla es baja: el marcador se compacta para que los 4 jugadores
+     Keeppan alto tocable en vez de que el marcador se coma la cancha. */
+  .marcador {
+    gap: 4px;
+    padding: 6px 10px;
+  }
+
+  .marcador__equipo {
+    font-size: 0.72em;
+  }
+
+  .marcador__cuenta b {
+    font-size: 1.25em;
+  }
+
+  .punto {
+    min-height: 44px;
+    font-size: 1.25em;
+  }
+
+  .puntos__vs {
+    font-size: 0.6em;
+  }
+
+  .parcial button {
+    min-height: 44px;
+    min-width: 40px;
+    padding: 0 4px;
+  }
+
+  .acciones {
+    margin-top: 6px;
+  }
+
+  .acciones button {
+    min-height: 44px;
+  }
+
+  .cancha {
+    grid-template-columns: minmax(0, 1fr) 1px minmax(0, 1fr);
+    grid-template-rows: 1fr 1fr;
+  }
+
+  /* La red: una línea en el medio del rectángulo. */
+  .cancha::after {
+    content: '';
+    grid-column: 2;
+    grid-row: 1 / -1;
+    background: var(--linea);
+  }
+
+  /* Cada jugador va a su esquina. Sin esto, los dos de arriba caen en la misma celda y
+     solo se ve uno: el puesto decide la esquina, no el lado de la cancha.
+     1 arriba-izq · 2 arriba-der · 3 abajo-izq · 4 abajo-der. */
+  .jugador:nth-child(1) {
+    grid-area: 1 / 1;
+  }
+
+  .jugador:nth-child(2) {
+    grid-area: 1 / 3;
+  }
+
+  .jugador:nth-child(3) {
+    grid-area: 2 / 1;
+  }
+
+  .jugador:nth-child(4) {
+    grid-area: 2 / 3;
+  }
+
+  .jugador {
+    justify-content: center;
+  }
+
+  /* En horizontal la celda es más angosta: el nombre se aparta un poco menos. */
+  .jugador--seleccionado .jugador__nombre {
+    padding: 0 calc(var(--tam-resultado) - 4px);
+  }
+
+  .modal__movimientos {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+/* Pantallas muy bajas en vertical: achica el marcador antes que la cancha. */
+@media (max-height: 620px) and (orientation: portrait) {
+  .marcador__cuenta b {
+    font-size: 1.2em;
+  }
+
+  .punto {
+    font-size: 1.2em;
+    min-height: 40px;
+  }
+}
+/* ---------------------------------------------------------------- avisos flotantes */
+
+.avisos {
+  position: fixed;
+  left: 50%;
+  top: max(12px, env(safe-area-inset-top));
+  transform: translateX(-50%);
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: min(92vw, 520px);
+  pointer-events: none;
+}
+
+.aviso {
+  padding: 14px 16px;
+  border-radius: var(--radio);
+  background: var(--verde);
+  color: #04240f;
+  font-weight: 700;
+  text-align: center;
+  box-shadow: 0 6px 20px rgb(0 0 0 / 45%);
+}
+
+.aviso--error {
+  background: var(--rojo);
+  color: #fff;
+}
+
+/* El resumen del modal de copia: tiene que poder seleccionarse a mano (RF-81). */
+.resumen-modal {
+  flex: 1 1 auto;
+  min-height: 120px;
+  overflow-y: auto;
+  background: var(--fondo);
+  border: 1px solid var(--linea);
+  border-radius: var(--radio);
+  padding: 12px;
+  white-space: pre-wrap;
+  font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+  font-size: 0.85em;
+  line-height: 1.45;
+  user-select: text;
+  -webkit-user-select: text;
+}
