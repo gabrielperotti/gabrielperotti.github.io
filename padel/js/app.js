@@ -80,7 +80,10 @@ const acciones = {
     if (jugador === null) return;
 
     // El punto todavía no existe: recién se registra cuando se elige el movimiento (RF-31).
-    estado.pendiente = { jugador, pareja: puesto <= 2 ? 'A' : 'B', resultado };
+    // El `puesto` viaja con el pendiente sólo para que la UI ubique la ficha del jugador y
+    // ancle el modal arriba de ella: `pendiente` no se persiste, así que no ensucia el estado
+    // guardado.
+    estado.pendiente = { jugador, pareja: puesto <= 2 ? 'A' : 'B', resultado, puesto };
     dibujar();
 
     ui.mostrarModalMovimientos(
@@ -165,7 +168,7 @@ const acciones = {
 
   copiarResumen() {
     if (estado.partido === null) return;
-    copiarResumen(estado.partido, estado.vista);
+    copiarResumen(estado.partido);
   },
 };
 
@@ -200,26 +203,22 @@ function descartarPunto() {
   dibujar();
 }
 
-// Copia el resumen. La API de portapapeles solo existe en contexto seguro: sirviendo por la
-// IP de la LAN (el procedimiento de AGENTS.md) no hay contexto seguro y SIEMPRE falla. Por eso
-// copiar es el atajo y el texto a mano es la vía real: si la copia falla, se muestra el resumen
-// en pantalla, seleccionable (RF-81).
-async function copiarResumen(partido, vista) {
+// Copia el resumen. Solo se llama desde la pantalla de fin: con el partido en curso no hay
+// botón (el resumen es el resultado, no un estado parcial).
+//
+// La API de portapapeles solo existe en contexto seguro: sirviendo por la IP de la LAN (el
+// procedimiento de AGENTS.md) no hay contexto seguro y SIEMPRE falla. Por eso copiar es el
+// atajo y el texto a mano es la vía real: si la copia falla, se avisa y la persona selecciona
+// el texto del `.resumen`, que ya está a la vista y es seleccionable (RF-81).
+async function copiarResumen(partido) {
   const texto = generarResumen(partido);
 
   try {
     if (globalThis.navigator?.clipboard?.writeText === undefined) throw new Error('Sin API de portapapeles');
     await globalThis.navigator.clipboard.writeText(texto);
     ui.mostrarAviso('¡Resumen copiado!', false);
-    return;
   } catch {
-    // En la pantalla de fin el texto ya está a la vista: alcanza con avisar.
-    if (vista === 'fin') {
-      ui.mostrarAviso('No se pudo copiar: seleccioná el texto de arriba y copialo a mano.', true);
-      return;
-    }
-    ui.mostrarModalResumen(texto, () => copiarResumen(partido, vista));
-    ui.mostrarAviso('No se pudo copiar. Seleccioná el texto y copialo a mano.', true);
+    ui.mostrarAviso('No se pudo copiar: seleccioná el texto de arriba y copialo a mano.', true);
   }
 }
 

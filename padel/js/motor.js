@@ -52,12 +52,12 @@ export function nuevoJuego(fase = FASE_NORMAL) {
   };
 }
 
+// El set no guarda quién saca: el saque se deduce del marcador (ver `servidorDe`).
 export function nuevoSetAbierto() {
   return {
     juegos: { A: 0, B: 0 },
     tieBreak: null,
     porTieBreak: false,
-    servidorAlEntrarAlTieBreak: null,
     juego: nuevoJuego(),
   };
 }
@@ -144,6 +144,8 @@ export function crearPartido({ parejaA, parejaB, setsAElegir = 3, modalidad = MO
     },
     marcador: {
       sets: [nuevoSetAbierto()],
+      // `servidor` no es un dato que se lleve en cada punto, sino el valor deducido que
+      // escribe `derivar`. Con el marcador en cero, el deducido es el que fue declarado.
       servidor: parejaQueSacaElPrimero,
       terminado: false,
     },
@@ -167,7 +169,7 @@ function crearPareja(letra, datos, primerPuesto) {
 // Cómo se escribe un equipo: los nombres de sus jugadores unidos con una barra, en orden de
 // puesto en la cancha. `Gabi/Maxi`.
 //
-// Es la única fuente de ese texto: la usan el marcador, el pie (quién saca) y el resumen.
+// Es la única fuente de ese texto: la usan los nombres del marcador y el resumen.
 // No hay nombre de pareja que pueda overriding, así que no hay nada que decidir acá — salvo
 // un estado que no venga de `crearPartido`, donde sí hace falta un texto que no esté vacío.
 export function nombreDeEquipo(partido, letra) {
@@ -441,7 +443,6 @@ function copiarSet(set) {
     juegos: { ...set.juegos },
     tieBreak: set.tieBreak === null ? null : { ...set.tieBreak },
     porTieBreak: set.porTieBreak,
-    servidorAlEntrarAlTieBreak: set.servidorAlEntrarAlTieBreak ?? null,
     juego: set.juego === null ? null : { ...set.juego, puntos: { ...set.juego.puntos } },
   };
 }
@@ -468,6 +469,7 @@ export function reiniciar(partido) {
     motivoFin: null,
     marcador: {
       sets: [nuevoSetAbierto()],
+      // Recién empieza: el deducido es el saque declarado en la creación.
       servidor: partido.config.parejaQueSacaElPrimero,
       terminado: false,
     },
@@ -527,12 +529,13 @@ export function scorePoint(partido, pareja, { jugadorId, resultado, movimientoId
   if (set.juego.fase === FASE_TIE_BREAK) {
     avanzarPuntoDeTieBreak(set, favecible);
   } else if (avanzarPunto(set.juego, favecible, copia.config.modalidad)) {
-    cerrarJuego(copia.marcador, set, favecible);
+    cerrarJuego(set, favecible);
   }
 
   sumarEstadistica(copia, jugadorId, resultado, movimientoId);
 
-  // El saque no se recalcula acá: lo cambia `cerrarJuego`, y una edición no lo toca (RF-54).
+  // El saque no se toca acá: es un valor deducido del marcador, y lo calcula `derivar` al
+  // final. Nadie lo edita a mano (RF-54): la UI solo lo lee.
   return conMarcadorDerivado(copia);
 }
 
@@ -597,17 +600,17 @@ function siguientePuntos(valor) {
   return PUNTOS[PUNTOS.indexOf(valor) + 1];
 }
 
-// Suma el juego, reinicia el puntaje y pasa el saque a la pareja que ganó (RF-18).
-function cerrarJuego(marcador, set, pareja) {
+// Suma el juego y abre el siguiente en 0-0. El saque no se toca: se deduce del marcador, así
+// que al cambiar la cuenta de juegos ya sale el correcto (FIP, ver `servidorDe`).
+function cerrarJuego(set, pareja) {
   set.juegos[pareja] += 1;
   set.juego = nuevoJuego();
-  marcador.servidor = pareja;
 }
 
 // `derivar` es la única que decide cierre de set, set siguiente y fin de partido.
 // La usan igual `scorePoint` y las tres `editar*` (constitución 4).
-function derivar(marcador, setsParaGanar) {
-  const sets = marcador.sets.map((set) => normalizarSet(set, marcador.servidor));
+function derivar(marcador, setsParaGanar, parejaQueSacaElPrimero) {
+  const sets = marcador.sets.map((set) => normalizarSet(set));
 
   // Un set en curso nunca puede estar seguido de otros, ni siquiera cerrados: el primero
   // con `juego` manda y lo que viene después se descarta (RF-51, CE-5).
@@ -620,21 +623,17 @@ function derivar(marcador, setsParaGanar) {
     }
   }
 
-  let servidor = marcador.servidor;
-
   // Cerrar por tie-break el set en curso, si corresponde (RF-22).
   if (abierto !== -1) {
     const set = sets[abierto];
     if (set.tieBreak !== null && cierraElTieBreak(set.tieBreak)) {
       set.juego = null;
       set.porTieBreak = true;
-      // FIP: el set siguiente lo empieza la pareja que NO sacaba primero en el tie-break.
-      servidor = otraPareja(set.servidorAlEntrarAlTieBreak ?? marcador.servidor);
       abierto = -1;
     }
   }
 
-  const derivado = { ...marcador, sets, servidor };
+  const derivado = { ...marcador, sets };
   const terminado = setsGanados(derivado, 'A') >= setsParaGanar || setsGanados(derivado, 'B') >= setsParaGanar;
 
   if (terminado) {
@@ -644,25 +643,45 @@ function derivar(marcador, setsParaGanar) {
     sets.push(nuevoSetAbierto());
   }
 
-  return { ...derivado, terminado };
+  // El saque se deduce recién acá, con la lista de sets ya decidida. Así el indicador muestra
+  // la pareja del game en curso apenas se abre un set nuevo, sin esperar al primer punto: el
+  // game en curso es el último de la lista, y en un partido terminado el último que se jugó.
+  return { ...derivado, servidor: servidorDe(sets, parejaQueSacaElPrimero), terminado };
+}
+
+// Quién saca el game en curso, a nivel pareja.
+//
+// En pádel el saque alterna en CADA game y no depende de quién ganó el anterior (FIP): uno de
+// la pareja que empezó sacando, uno de la rival, el otro de la primera, el que falte, y el
+// ciclo vuelve a empezar. Cada jugador saca una vez cada 4 games.
+//
+// No hace falta guardar nada para sostener eso: la alternancia es la paridad del turno, y el
+// turno es la cantidad de games que ya se jugaron en el partido. Ese total es el índice del
+// set (los games de los sets anteriores) más los games del set en curso. La paridad del índice
+// del set es la que hace que cada set empiece con la pareja contraria a la del set anterior:
+// es la otra mitad de la misma regla FIP, el primer game de cada set lo saca la pareja que no
+// lo sacó en el set anterior.
+function servidorDe(sets, parejaQueSacaElPrimero) {
+  const indice = sets.length - 1;
+  const ultimo = sets[indice];
+  const turnos = indice + ultimo.juegos.A + ultimo.juegos.B;
+  return turnos % 2 === 0 ? parejaQueSacaElPrimero : otraPareja(parejaQueSacaElPrimero);
 }
 
 // Deja cada set coherente consigo mismo antes de contar.
-function normalizarSet(set, servidor) {
+function normalizarSet(set) {
   const copia = { ...set, juegos: { ...set.juegos } };
 
   if (entraATieBreak(copia.juegos)) {
     if (copia.tieBreak === null) {
-      // El tie-break arranca acá. Se anota quién sacaba en ese momento, que es el que
-      // decide el saque del set siguiente cuando el tie-break cierre (FIP).
+      // El tie-break arranca acá. No hay nada más que anotar del saque: se deduce de la
+      // cuenta de games, y el tie-break es el game 13 del set (ver `servidorDe`).
       copia.tieBreak = nuevoTieBreak();
-      copia.servidorAlEntrarAlTieBreak = servidor;
     }
   } else {
     // Los juegos ya no son 6-6: se descarta el contador de tie-break y cómo cerró (CE-6).
     copia.tieBreak = null;
     copia.porTieBreak = false;
-    copia.servidorAlEntrarAlTieBreak = null;
   }
 
   const cierra = cierraElSet(copia.juegos);
@@ -690,7 +709,7 @@ function juegoPara(set) {
 
 // Aplica la derivación y sincroniza `estado` y `motivoFin` con `marcador.terminado`.
 function conMarcadorDerivado(partido) {
-  const marcador = derivar(partido.marcador, partido.config.setsParaGanar);
+  const marcador = derivar(partido.marcador, partido.config.setsParaGanar, partido.config.parejaQueSacaElPrimero);
   return {
     ...partido,
     marcador,

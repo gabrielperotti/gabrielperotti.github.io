@@ -172,17 +172,6 @@ body {
   color: var(--eq-b);
 }
 
-/* La pelota de pádel, dibujada con CSS: cero dependencias, cero CDN. */
-.pelota {
-  display: inline-block;
-  width: 13px;
-  height: 13px;
-  border-radius: 50%;
-  background: radial-gradient(circle at 34% 30%, #fff3c4, var(--pelota) 58%, var(--pelota-fuerte));
-  box-shadow: 0 0 10px -1px rgb(255 211 77 / 70%);
-  flex: none;
-}
-
 .icono {
   width: 18px;
   height: 18px;
@@ -458,7 +447,11 @@ body {
   color: var(--t-3);
 }
 
-/* --- saque y avisos */
+/* --- avisos
+
+   Fila del marcador para los avisos (set point, match point, por qué terminó). El saque no
+   aparece acá: la pelota pegada al nombre de la pareja, en la fila 1, ya lo dice. Cuando no
+   hay aviso la fila se oculta desde la UI, para no dejar un hueco de alto en el marcador. */
 
 .marcador__pie {
   grid-area: pie;
@@ -468,26 +461,6 @@ body {
   gap: 8px;
   min-height: 20px;
   min-width: 0;
-}
-
-.saca {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font: 700 var(--f-11) / 1.2 var(--sans);
-  /* --t-1 y no --t-2: en horizontal el saque vive en el piso de la cancha, que es donde el
-     velo de la hoja ya está al 72% de negro. Con --t-2 quedaba en 3,9:1 con la hoja
-     abierta. */
-  color: var(--t-1);
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  min-width: 0;
-}
-
-.saca__txt {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 /* Píldora de amarillo de pelota. Sólo para avisos: set point, match point, y por qué
@@ -997,20 +970,11 @@ body {
   font-size: var(--f-13);
 }
 
-/* Con el nombre largo, la etiqueta "Ganó"/"Falló" no entra al lado del monograma: se queda
-   sólo el glifo, que sigue siendo obvio por color y por forma. Sin esto el texto se sale
-   de la caja del botón. El aviso va en `.ficha` (el ancestro común del nombre y de los
-   botones), no en el nombre. */
-.ficha--largo .resultado span:not(.resultado__glifo) {
-  display: none;
-}
-
 /* ------------------------------------------- el piso de la cancha
 
-   En vertical no hay piso: el saque y los avisos viven en el pie del marcador. En
-   horizontal el marcador es un riel de 70px y no entra, así que bajan acá, que en
-   horizontal sobra a los lados. El texto se escribe en los dos lugares y la orientación
-   muestra uno. */
+   En vertical no hay piso: los avisos viven en el pie del marcador. En horizontal el
+   marcador es un riel de 70px y no entra, así que bajan acá, que en horizontal sobra a los
+   lados. El texto se escribe en los dos lugares y la orientación muestra uno. */
 
 .piso-info {
   display: none;
@@ -1378,8 +1342,11 @@ body {
 
 /* ============================================================ HOJA DE MOVIMIENTOS
 
-   Va abajo, no en el centro. Así tapa la mitad de abajo de la cancha pero nunca la ficha
-   del jugador que se acaba de tocar, y deja el marcador entero a la vista. */
+   La hoja base es la de pegada al borde inferior: el modal de resumen y el modal de
+   movimientos cuando no entra anclada a la ficha. El modal de movimientos, en cambio, se ancla
+   arriba de la ficha del jugador que se acaba de tocar, o abajo de ella si arriba no entra
+   (`.hoja--flotante`). Cuando flota, el marcador queda entero a la vista igual que antes: el
+   velo sigue arrancando abajo de su franja. */
 
 .capa-modal {
   position: fixed;
@@ -1416,6 +1383,37 @@ body {
   border-top: 1px solid rgb(255 255 255 / 12%);
   box-shadow: var(--s-hoja);
   max-height: 100%;
+}
+
+/* La variante anclada a la ficha del jugador. `top` y el alto máximo no se inventan acá:
+   llegan como `--top` y `--alto-max` desde `posicionDeHoja` (ui.js), que es quien sabe si la
+   hoja entra arriba de la ficha, abajo de ella o en ningún lado. Los `var(…, auto)` /
+   `var(…, 100%)` son sólo para que la hoja sea válida durante la medición, antes de que la
+   JS escriba las dos medidas.
+
+   El ancho NO se toca: sigue `left: 0; right: 0`, o sea el ancho de la pantalla menos los
+   márgenes laterales. El anclaje es vertical, y con 3 columnas de botones de 54px angostarla
+   rompe los objetivos táctiles.
+
+   La sombra es la de tarjeta (`--s-piso`), no `--s-hoja`: la de la hoja está hecha para algo
+   pegado al fondo, con la línea de luz arriba y la sombra proyectada hacia arriba. Flotando
+   hace falta que la caja se despegue en las cuatro direcciones. */
+.hoja--flotante {
+  top: var(--top, auto);
+  bottom: auto;
+  max-height: var(--alto-max, 100%);
+  /* Red de seguridad: si el alto natural llegara a apretar, el contenido scrollea adentro
+     en vez de salirse de la pantalla. */
+  overflow: auto;
+  border: 1px solid var(--linea);
+  border-radius: var(--r-lg);
+  box-shadow: var(--s-piso), 0 12px 30px -14px rgb(0 0 0 / 85%);
+}
+
+/* El tirador era para arrastrar una hoja pegada al fondo. Flotando no se arrastra nada, así
+   que un tirador ahí le mentiría a la persona que lo toca. */
+.hoja--flotante .hoja__agarre {
+  display: none;
 }
 
 .hoja__agarre {
@@ -1512,29 +1510,6 @@ body {
   box-shadow: none;
   color: var(--t-2);
   gap: 7px;
-}
-
-/* El resumen en la hoja de copia manual: a la vista y seleccionable, porque en contexto
-   no seguro (por la IP de la LAN) no hay portapapeles y copiar a mano es la única vía. */
-.hoja__texto {
-  flex: 1 1 auto;
-  min-height: 120px;
-  max-height: 46dvh;
-  margin: 0 0 10px;
-  overflow: auto;
-  border: 1px solid var(--linea);
-  border-left: 3px solid var(--pelota);
-  border-radius: var(--r-sm);
-  background: var(--n-1);
-  color: #d3e4f2;
-  padding: 10px 12px;
-  white-space: pre-wrap;
-  overflow-wrap: break-word;
-  font-family: var(--mono);
-  font-size: 14px;
-  line-height: 1.55;
-  user-select: text;
-  -webkit-user-select: text;
 }
 
 /* ============================================================ AVISOS FLOTANTES */
@@ -1890,7 +1865,7 @@ body {
     outline-offset: -1px;
   }
 
-  /* --- el saque y los avisos, al piso */
+  /* --- los avisos, al piso */
 
   .marcador__pie {
     display: none;
@@ -2063,10 +2038,6 @@ body {
   .ficha--elegida .resultado {
     font-size: var(--f-22);
     padding: 0 4px;
-  }
-
-  .ficha--elegida .resultado span:not(.resultado__glifo) {
-    display: none;
   }
 
   /* --- la barra de acciones sigue siendo una fila */

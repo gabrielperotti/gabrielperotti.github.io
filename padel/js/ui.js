@@ -57,6 +57,20 @@ export function juegosVisiblesDeSet(set) {
   return { A: String(set.juegos.A), B: String(set.juegos.B) };
 }
 
+// Qué sets muestran su parcial en el marcador, como índices.
+//
+// Mientras se juega, sólo el set en curso: los parciales de los sets ya cerrados están a la
+// vista en el resumen y, en vertical, cada cajita de más hace crecer el marcador hasta que la
+// pantalla no scrollea y el resto se va de pantalla.
+//
+// En la pantalla de fin van todos: ahí el marcador es el resultado del partido, y en esa vista
+// no compite con nada.
+export function indicesDeSetsVisibles(partido, vista) {
+  if (vista === 'fin') return partido.marcador.sets.map((_, indice) => indice);
+  const indice = indiceSetEnCurso(partido.marcador);
+  return indice === -1 ? [] : [indice];
+}
+
 // Los avisos de set point y match point. No bloquean nada: son texto (RF-44).
 export function avisosDePunto(partido) {
   const { matchPointA, matchPointB, setPointA, setPointB } = derivados(partido);
@@ -155,6 +169,60 @@ export function formularioCompleto(datos) {
 export function tituloDelPuntoPendiente(jugador, resultado) {
   const nombre = jugador?.nombre?.trim() || '';
   return resultado === 'fallado' ? `Fallo de ${nombre}` : `Punto de ${nombre}`;
+}
+
+// Separación entre la hoja flotante y la ficha, y margen que la hoja se respeta con el borde
+// de la pantalla. No son ajustes: son los valores que dejan los botones separados de la ficha
+// y sin llegar al borde, sin tapar nada.
+const HOLGURA_HOJA = 8;
+const MARGEN_PANTALLA = 10;
+
+// Dónde va la hoja de movimientos: ARRIBA de la ficha del jugador que se acaba de tocar y, si
+// arriba no entra, ABAJO de esa misma ficha. El ancla es la ficha, no la pantalla: la ficha
+// es el punto que la persona tiene bajo el dedo, así que la hoja se abre pegada a él.
+//
+// Devuelve `{ top, maxHeight, modo }`, o `null` cuando no entra en ninguno de los dos lados:
+// la señal de que hay que abrirla pegada al borde inferior, como antes. `null` también es lo
+// que devuelve cuando los datos no sirven para decidir (una ficha sin caja, un alto medido en
+// cero): antes no abrir el modal nunca es una opción, porque es el paso 3 de los 3 toques.
+//
+// Es pura a propósito: la regla del fallback se testea en Node, sin navegador. No mide nada
+// ni toca el DOM; recibe el rect de la ficha ya medido y el alto natural de la hoja. Ambos en
+// coordenadas de viewport: `.capa-modal` es `position: fixed; inset: 0`, así que ahí adentro
+// son las mismas coordenadas y no hay scroll que compensar.
+//
+// El ancho no se calcula: la hoja flotante sigue con `left: 0; right: 0`, o sea el ancho de
+// la pantalla menos los márgenes laterales. El anclaje es vertical; con 3 columnas de
+// botones de 54px, angostarla rompería los objetivos táctiles.
+export function posicionDeHoja({
+  ancla,
+  altoHoja,
+  altoVentana,
+  holgura = HOLGURA_HOJA,
+  margen = MARGEN_PANTALLA,
+}) {
+  // Una ficha sin caja (arrriba >= abajo) o un alto que no se midió bien: no hay posición que
+  // inventar, así que se cae al borde inferior.
+  if (ancla === null || ancla === undefined) return null;
+  if (!Number.isFinite(ancla.arriba) || !Number.isFinite(ancla.abajo)) return null;
+  if (ancla.abajo <= ancla.arriba) return null;
+  if (!Number.isFinite(altoHoja) || altoHoja <= 0) return null;
+  if (!Number.isFinite(altoVentana) || altoVentana <= 0) return null;
+
+  // Arriba: la holgura separa la hoja de la ficha, el margen la del borde de arriba. Si el
+  // alto natural entra en ese hueco, va arriba y no hay nada que recortar.
+  const espacioArriba = ancla.arriba - holgura - margen;
+  if (altoHoja <= espacioArriba) {
+    return { modo: 'arriba', top: ancla.arriba - holgura - altoHoja, maxHeight: espacioArriba };
+  }
+
+  // Abajo: mismo criterio, del otro lado de la ficha.
+  const espacioAbajo = altoVentana - ancla.abajo - holgura - margen;
+  if (altoHoja <= espacioAbajo) {
+    return { modo: 'abajo', top: ancla.abajo + holgura, maxHeight: espacioAbajo };
+  }
+
+  return null;
 }
 
 // ================================================================= DOM
@@ -491,8 +559,11 @@ function construirMarcador() {
 
     el('div', { clase: 'editor editor--puntos', hidden: true }),
 
-    // Fila 4: saque y avisos. En horizontal esta fila no entra en el marcador: el saque y
-    // los avisos bajan al piso de la cancha (`.piso-info`), que ahí sobra a los lados.
+    // Fila 4: los avisos (set point, match point, por qué terminó). El saque no va acá: la
+    // pelota pegada al nombre de la pareja, en la fila 1, ya lo dice. Si no hay nada que
+    // avisar la fila se oculta, para no dejar un hueco en el marcador. En horizontal esta fila
+    // no entra en el marcador: los avisos bajan al piso de la cancha (`.piso-info`), que ahí
+    // sobra a los lados.
     el('div', { clase: 'marcador__pie' }),
   ]);
 }
@@ -524,8 +595,8 @@ function construirCancha() {
         grupoFichas('abajo', 'B', 3),
       ]),
     ]),
-    // El saque y los avisos, en el piso. Es el mismo texto que en vertical vive en el pie
-    // del marcador; la orientación muestra uno u otro.
+    // Los avisos, en el piso. Es el mismo texto que en vertical vive en el pie del marcador;
+    // la orientación muestra uno u otro.
     el('div', { clase: 'piso-info' }),
   ]);
 }
@@ -556,7 +627,6 @@ function construirFicha(puesto, letra, lateral) {
       onclick: () => acciones.elegirResultado(puesto, 'ganado'),
     }, [
       el('span', { clase: 'resultado__glifo', texto: '✓' }),
-      el('span', { texto: 'Ganó' }),
     ]),
     el('button', {
       clase: 'resultado resultado--rojo',
@@ -565,7 +635,6 @@ function construirFicha(puesto, letra, lateral) {
       onclick: () => acciones.elegirResultado(puesto, 'fallado'),
     }, [
       el('span', { clase: 'resultado__glifo', texto: '✗' }),
-      el('span', { texto: 'Falló' }),
     ]),
   ]);
 
@@ -578,9 +647,10 @@ function construirFicha(puesto, letra, lateral) {
   return ficha;
 }
 
+// La barra del partido no tiene "Copiar": el resumen solo se copia con el partido terminado
+// (pantalla de fin), así que acá el botón no llevaría a ninguna parte.
 function construirAccionesDePartido() {
   return el('nav', { clase: 'acciones' }, [
-    boton('Copiar', () => acciones.copiarResumen(), { dibujo: ICONO_COPIAR }),
     boton('Reiniciar', () => acciones.reiniciar(), { dibujo: ICONO_REINICIAR }),
     boton('Cerrar', () => acciones.cerrar(), { clase: 'btn--peligro', dibujo: ICONO_CERRAR }),
   ]);
@@ -689,7 +759,10 @@ function dibujarParciales(estado) {
   const { partido } = estado;
   const editable = sePuedeEditarJuegos(partido);
 
-  const grupos = partido.marcador.sets.map((set, indice) => {
+  // Sólo se dibujan los sets que `indicesDeSetsVisibles` deja ver: en la vista de partido, el
+  // set en curso; en la de fin, todos.
+  const grupos = indicesDeSetsVisibles(partido, estado.vista).map((indice) => {
+    const set = partido.marcador.sets[indice];
     const enCurso = indice === indiceSetEnCurso(partido.marcador);
     const visibles = juegosVisiblesDeSet(set);
     const grupo = el('span', { clase: enCurso ? 'parcial parcial--curso' : 'parcial' });
@@ -730,12 +803,7 @@ function dibujarPuntos(estado) {
 
 function dibujarPie(estado) {
   const { partido } = estado;
-  const partes = [
-    el('span', { clase: 'saca' }, [
-      el('i', { clase: 'pelota' }),
-      el('span', { clase: 'saca__txt', texto: `Saca: ${nombreDeEquipo(partido, partido.marcador.servidor)}` }),
-    ]),
-  ];
+  const partes = [];
 
   // Los avisos de set point y match point: píldoras de amarillo de pelota. El texto lo
   // decide el motor (`avisosDePunto`), acá solo se pinta.
@@ -748,7 +816,14 @@ function dibujarPie(estado) {
 
   // El mismo texto en los dos lugares donde puede verse. Se escriben juntos, en la misma
   // pasada: no hay forma de que uno quede viejo.
-  const pintar = (destino) => destino.replaceChildren(...partes.map((parte) => parte.cloneNode(true)));
+  //
+  // Sin avisos no queda nada que decir ahí, y la fila se oculta: una fila vacía igual ocupa
+  // alto en el marcador y le roba lugar a la cancha. El saque no vive más en este lugar: la
+  // pelota pegada al nombre de la pareja, en la fila 1, ya lo dice.
+  const pintar = (destino) => {
+    destino.replaceChildren(...partes.map((parte) => parte.cloneNode(true)));
+    destino.hidden = partes.length === 0;
+  };
   pintar(nodos.pie);
   pintar(nodos.piePiso);
 }
@@ -860,10 +935,6 @@ function dibujarCancha(estado) {
     // suspensivos: en la cancha se lee al jugador de frente.
     const largo = textoNombre.length > 12;
     texto.classList.toggle('ficha__nombre--largo', largo);
-    // El mismo aviso va en la ficha, no sólo en el nombre: el nombre vive adentro de
-    // `.ficha__hit` y los botones son hermanos de ese botón, así que desde el nombre no se
-    // llega a ellos. La ficha es el ancestro común de los dos.
-    ficha.classList.toggle('ficha--largo', largo);
 
     const estaElegido = puede && elegido === jugador?.id;
     ficha.classList.toggle('ficha--elegida', estaElegido);
@@ -889,7 +960,7 @@ function dibujarResumen(estado) {
   nodos.motivoFin.textContent = mensajeDeEstado(estado.partido) ?? 'Fin del partido';
 }
 
-// ---------------------------------------------------------------- avisos y copia manual
+// ---------------------------------------------------------------- avisos
 
 // Aviso flotante: se ve desde cualquier vista y desaparece solo.
 export function mostrarAviso(texto, esError = false) {
@@ -905,33 +976,17 @@ export function mostrarAviso(texto, esError = false) {
   globalThis.setTimeout(() => aviso.remove(), esError ? 5200 : 2600);
 }
 
-// El resumen a la vista y seleccionable, para cuando la copia automática no pudo hacerse
-// (contexto no seguro: sirviendo por la IP de la LAN no hay portapapeles).
-export function mostrarModalResumen(texto, alReintentar) {
-  const cerrar = () => ocultarModal();
-
-  const modal = el('div', { clase: 'hoja', role: 'dialog', 'aria-modal': 'true' }, [
-    el('div', { clase: 'hoja__agarre' }),
-    el('div', { clase: 'hoja__titulo' }, [
-      el('span', { clase: 'hoja__jugador', svg: 'Resumen del partido' }),
-    ]),
-    el('pre', { clase: 'hoja__texto', tabindex: '0', texto }),
-    el('nav', { clase: 'acciones' }, [
-      boton('Copiar', () => alReintentar(), { clase: 'btn--pelota', dibujo: ICONO_COPIAR }),
-      boton('Cerrar', cerrar, { dibujo: ICONO_CERRAR }),
-    ]),
-  ]);
-
-  nodos.capaModal.onclick = (evento) => { if (esToqueFuera(evento)) cerrar(); };
-  nodos.capaModal.replaceChildren(el('div', { clase: 'velo' }), modal);
-  nodos.capaModal.hidden = false;
-}
-
 // ---------------------------------------------------------------- modal
 
-// Hoja de movimientos. Va ABAJO, no en el centro: así tapa la mitad de abajo de la cancha pero
-// nunca la ficha del jugador que se acaba de tocar, y deja el marcador entero arriba (T45).
-// El velo arranca abajo del marcador, así que el marcador ni se atenúa.
+// Hoja de movimientos. Se ancla ARRIBA de la ficha del jugador que se acaba de tocar y, si no
+// entra arriba, ABAJO de esa ficha: el ancla es la ficha, porque es el punto de la pantalla
+// que la persona tiene bajo el dedo. La regla la decide `posicionDeHoja` y la pinta la
+// variante `.hoja--flotante`.
+//
+// Cuando no entra en ninguno de los dos lados —típicamente en horizontal, donde la pantalla
+// es baja y los ~250px de la hoja no entran ni arriba ni abajo— se cae a la hoja pegada al
+// borde inferior de siempre. Es preferible una hoja sin ancla a no tener modal: este es el
+// paso 3 de los 3 toques y no puede fallar.
 export function mostrarModalMovimientos(pendiente, alElegir, alDescartar) {
   const cerrar = () => {
     nodos.capaModal.hidden = true;
@@ -972,8 +1027,63 @@ export function mostrarModalMovimientos(pendiente, alElegir, alDescartar) {
   nodos.capaModal.onclick = (evento) => {
     if (esToqueFuera(evento)) { cerrar(); alDescartar(); }
   };
-  nodos.capaModal.replaceChildren(el('div', { clase: 'velo' }), el('div', { clase: 'hoja', role: 'dialog', 'aria-modal': 'true' }, hojas));
+
+  const hoja = el('div', { clase: 'hoja', role: 'dialog', 'aria-modal': 'true' }, hojas);
+  nodos.capaModal.replaceChildren(el('div', { clase: 'velo' }), hoja);
   nodos.capaModal.hidden = false;
+
+  anclarHojaEnFicha(hoja, pendiente.puesto);
+}
+
+// Ancla la hoja a la ficha del jugador que se acaba de tocar. Mide, decide con
+// `posicionDeHoja` y aplica: si la regla dice que no entra en ningún lado, saca la variante
+// flotante y la hoja queda pegada al borde inferior, como antes.
+//
+// Se mide con la hoja YA en la capa y con `visibility: hidden`: `visibility: hidden` sí
+// calcula el layout, así que el alto que sale es el alto natural de verdad (3 filas de
+// botones de 54px), y el ancho es el mismo que va a tener después. Medir con `display: none`
+// daría cero. Y se hace en el mismo turno que `capaModal.hidden = false`, sin esperas ni
+// pedidos de animación en el medio: el navegador no llega a pintar la posición intermedia,
+// así que no hay parpadeo.
+//
+// Si no hay ficha —no vino `puesto`, o el puesto no está en el mapa— no se toca nada: el
+// modal se abre igual, en el borde inferior.
+function anclarHojaEnFicha(hoja, puesto) {
+  const ficha = jugadores.get(puesto)?.ficha;
+  if (ficha === undefined) return;
+
+  hoja.classList.add('hoja--flotante');
+  hoja.style.visibility = 'hidden';
+
+  const caja = ficha.getBoundingClientRect();
+  const posicion = posicionDeHoja({
+    ancla: { arriba: caja.top, abajo: caja.bottom },
+    altoHoja: hoja.getBoundingClientRect().height,
+    // El alto sale de la CAJA de la capa, no de `window.innerHeight`. La hoja es `position:
+    // absolute` dentro de `.capa-modal`, así que el bloque contenedor es la capa: el borde
+    // contra el que hay que prometer que no nos pasamos es el de la capa. `innerHeight` mide
+    // otra cosa —el viewport visual, que en iOS cambia con la barra de URL— y difiere en los
+    // ~60-100px de la barra, casi diez márgenes: con esa diferencia la hoja puede pasarse del
+    // borde, o disparar el fallback en un caso donde sí entraba.
+    //
+    // `getBoundingClientRect()` y no `clientHeight`: el rect es fraccionario y es el mismo
+    // sistema de coordenadas que el `caja.top` / `caja.bottom` de la ficha, que también viene
+    // de un `getBoundingClientRect`. Con `clientHeight` se restarían enteros contra
+    // fraccionarios en la misma cuenta. Si la capa midiera 0, `posicionDeHoja` ya devuelve
+    // `null` y la hoja va al borde inferior: no hace falta ninguna guarda extra acá.
+    altoVentana: nodos.capaModal.getBoundingClientRect().height,
+  });
+
+  if (posicion === null) {
+    hoja.classList.remove('hoja--flotante');
+  } else {
+    // Las dos medidas llegan por variables de CSS y no como estilos sueltos: la geometría
+    // de la variante flotante queda declarada en `styles.css`, y la JS pasa números.
+    hoja.style.setProperty('--top', `${posicion.top}px`);
+    hoja.style.setProperty('--alto-max', `${posicion.maxHeight}px`);
+  }
+
+  hoja.style.visibility = '';
 }
 
 export function ocultarModal() {

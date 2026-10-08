@@ -1,6 +1,9 @@
 // Resumen en texto plano para pegar en un chat. Función pura: no toca el portapapeles,
 // no toca el DOM, no calcula reglas (solo lee lo que el motor ya decidió).
-// Formato exacto en el plan §11.
+//
+// El texto va ANGOSTO Y ALTO a propósito: se pega desde el teléfono en un chat, donde una
+// línea ancha se parte donde no debe o se sale de la pantalla. Por eso cada dato va en su
+// propia línea y los títulos de sección, sin sangría, arriba de su contenido con dos.
 
 import { MOVIMIENTOS, etiquetaMovimiento } from './movimientos.js';
 import {
@@ -12,45 +15,67 @@ import {
 } from './motor.js';
 
 const SEPARADOR = '·';
+// Dos espacios alcanzan para distinguir "contenido" de "título" sin gastar ancho.
+const SANGRIA = '  ';
 
 export function generarResumen(partido) {
-  const lineas = [];
-
-  lineas.push('Pádel de hoy 🎾');
-  lineas.push('');
-  lineas.push(lineaDeResultado(partido));
-  lineas.push(lineaDeParciales(partido));
+  const lineas = [
+    'Pádel de hoy 🎾',
+    '',
+    'Resultado:',
+    ...lineasDeResultado(partido),
+    lineaDeParciales(partido),
+  ];
 
   const lineasDeJugadores = lineasPorJugador(partido);
   if (lineasDeJugadores.length > 0) {
-    lineas.push('');
-    lineas.push(...lineasDeJugadores);
+    lineas.push('', ...lineasDeJugadores);
   }
 
-  const lineaDeDuelos = lineaDeDuelosPorMovimiento(partido);
-  if (lineaDeDuelos !== null) {
-    lineas.push('');
-    lineas.push(lineaDeDuelos);
+  const lineasDeDuelos = lineasDeDuelosPorMovimiento(partido);
+  if (lineasDeDuelos !== null) {
+    lineas.push('', ...lineasDeDuelos);
   }
 
-  lineas.push('');
-  lineas.push('¡Buen partido, fellas! 🎉');
+  lineas.push('', '¡Buen partido, fellas! 🎉');
 
   return lineas.join('\n');
 }
 
-// `<equipoA>  <setsA>-<setsB>  <equipoB>`, contando solo sets cerrados.
+// Una línea por pareja con los sets GANADOS entre corchetes. Solo cuentan los sets cerrados,
+// y eso lo decide `resultadoPartido`: acá no se cuenta nada.
 //
-// El nombre del equipo lo arma el motor (`nombreDeEquipo`): los nombres de los jugadores
-// unidos. No hay nombre de pareja en el modelo, así que acá no hay nada que decidir.
-function lineaDeResultado(partido) {
+// `(ganador)` va en la pareja que va ganando, sin importar si el partido terminó o no. Con
+// las dos parejas empatadas no lo lleva ninguna: el partido se puede cerrar a mano en el medio
+// y ahí no hay ganador que pueda poner.
+// (El resumen solo se copia con el partido terminado, así que en la práctica "(ganador)" es
+// el que ganó; igual el texto no depende de eso y `generarResumen` se sigue llamando en
+// partido en curso.)
+function lineasDeResultado(partido) {
   const { A, B } = resultadoPartido(partido);
-  return `${nombreDeEquipo(partido, 'A')}  ${A}-${B}  ${nombreDeEquipo(partido, 'B')}`;
+
+  let ganador = null;
+  if (A > B) ganador = 'A';
+  else if (B > A) ganador = 'B';
+
+  return [
+    lineaDePareja(partido, 'A', A, ganador),
+    lineaDePareja(partido, 'B', B, ganador),
+  ];
 }
 
-// Sets cerrados separados por dos espacios, más el set en curso al final si lo hay.
+// El nombre del equipo lo arma el motor (`nombreDeEquipo`): los nombres de los jugadores
+// unidos. No hay nombre de pareja en el modelo, así que acá no hay nada que decidir.
+function lineaDePareja(partido, letra, sets, ganador) {
+  const linea = `[${sets}] ${nombreDeEquipo(partido, letra)}`;
+  return letra === ganador ? `${linea} (ganador)` : linea;
+}
+
+// Los parciales van en UNA línea, con la misma notación de tie-break de siempre. El set en
+// curso va al final si lo hay: es el único que todavía puede cambiar.
 function lineaDeParciales(partido) {
-  return partido.marcador.sets.map(etiquetaDeSet).join('  ');
+  const parciales = partido.marcador.sets.map(etiquetaDeSet).join(` ${SEPARADOR} `);
+  return `${SANGRIA}sets: ${parciales}`;
 }
 
 // Un set cerrado va con su resultado (7-6 si se ganó en tie-break). Un set en tie-break en
@@ -63,6 +88,8 @@ function etiquetaDeSet(set) {
   return `${etiqueta} (TB ${set.tieBreak.A}-${set.tieBreak.B})`;
 }
 
+// El nombre del jugador en su propia línea y las estadísticas abajo: pegado en un chat, un
+// nombre suelto arriba de sus números se lee mucho mejor que dos datos pegados en un renglón.
 function lineasPorJugador(partido) {
   const lineas = [];
 
@@ -74,7 +101,7 @@ function lineasPorJugador(partido) {
     const fallos = totalDe(estadisticas.fallos);
     if (winners === 0 && fallos === 0) continue;
 
-    lineas.push(lineaDeJugador(partido, jugador, estadisticas));
+    lineas.push(`${jugador.nombre}:`, ...lineasDeEstadisticas(partido, jugador, estadisticas));
   }
 
   return lineas;
@@ -86,23 +113,24 @@ function jugadoresEnOrdenDePuesto(partido) {
     .sort((a, b) => a.puesto - b.puesto);
 }
 
-// `Gabi: 14 winners (lo mejor: remate) · 6 fallos (lo peor: banda)`
+// `  + 14 winners (lo mejor: remate)` y `  - 6 fallos (lo peor: banda)`
 //
-// El paréntesis solo aparece si hay algo que destacar: con cero winners no hay "lo mejor".
-function lineaDeJugador(partido, jugador, estadisticas) {
-  const partes = [];
+// El `+` y el `-` delatan de un vistazo cuál de las dos líneas es la buena. El paréntesis
+// solo aparece si hay algo que destacar: con cero winners no hay "lo mejor".
+function lineasDeEstadisticas(partido, jugador, estadisticas) {
+  const lineas = [];
 
   const winners = totalDe(estadisticas.winners);
   if (winners > 0) {
-    partes.push(`${winners} winners ${entreParentesis(mejorMovimiento(partido, jugador.id), 'lo mejor')}`);
+    lineas.push(`${SANGRIA}+ ${winners} winners ${entreParentesis(mejorMovimiento(partido, jugador.id), 'lo mejor')}`);
   }
 
   const fallos = totalDe(estadisticas.fallos);
   if (fallos > 0) {
-    partes.push(`${fallos} fallos ${entreParentesis(peorMovimiento(partido, jugador.id), 'lo peor')}`);
+    lineas.push(`${SANGRIA}- ${fallos} fallos ${entreParentesis(peorMovimiento(partido, jugador.id), 'lo peor')}`);
   }
 
-  return `${jugador.nombre}: ${partes.join(` ${SEPARADOR} `)}`;
+  return lineas;
 }
 
 function entreParentesis(movimientoId, rotulo) {
@@ -111,8 +139,9 @@ function entreParentesis(movimientoId, rotulo) {
   return `(${rotulo}: ${etiquetaMovimiento(movimientoId).toLowerCase()})`;
 }
 
-// Totales por movimiento, en el orden de la lista fija, solo los que se usaron.
-function lineaDeDuelosPorMovimiento(partido) {
+// Totales por movimiento, en el orden de la lista fija, solo los que se usaron: un movimiento
+// por línea, como las estadísticas de los jugadores.
+function lineasDeDuelosPorMovimiento(partido) {
   const totales = new Map();
 
   for (const estadisticas of Object.values(partido.estadisticas)) {
@@ -123,14 +152,14 @@ function lineaDeDuelosPorMovimiento(partido) {
     }
   }
 
-  const partes = [];
+  const lineas = [];
   for (const movimiento of MOVIMIENTOS) {
     const total = totales.get(movimiento.id) ?? 0;
-    if (total > 0) partes.push(`${movimiento.etiqueta} ${total}`);
+    if (total > 0) lineas.push(`${SANGRIA}${movimiento.etiqueta} ${total}`);
   }
 
-  if (partes.length === 0) return null;
-  return `Duelos: ${partes.join(` ${SEPARADOR} `)}`;
+  if (lineas.length === 0) return null;
+  return ['Duelos:', ...lineas];
 }
 
 function totalDe(contadores = {}) {
