@@ -1,47 +1,115 @@
-/* Padel Scores. Sin build: esto es lo que se despliega.
-   Pensado para una pantalla de teléfono al aire libre: contraste alto, botones grandes,
-   marcador siempre arriba y nada que requiera scroll para registrar un punto. */
+/* =============================================================================
+   Padel Scores — hoja de la app.
+
+   El sistema visual está en /tmp/opencode/mockups/sistema.css (esa es la maqueta;
+   acá está el CSS real, con los mismos tokens y las mismas reglas adaptadas a los
+   selectores que construye ui.js).
+
+   Sin font-face, sin CDN, sin build: la pila del sistema (Roboto en Android, SF Pro en
+   iOS) y SVG inline. Cero dependencias.
+
+   La orientación la resuelve `@media (orientation: …)`, no JavaScript: así rotar el
+   teléfono no puede desincronizar nada del DOM.
+   ========================================================================== */
+
+/* ---------------------------------------------------------------- tokens */
 
 :root {
   color-scheme: dark;
 
-  /* Fondo oscuro con texto claro: se lee mejor al sol que un tema claro en un teléfono
-     con brillo al máximo. */
-  --fondo: #101418;
-  --fondo-2: #191f26;
-  --fondo-3: #232c35;
-  --linea: #35414d;
+  /* Neutros: noche con las luces encendidas. Fríos, para que la cancha (que también es
+     azul) se separe por luminosidad y no sólo por tono. */
+  --n-0: #060a0f; /* fondo de la app */
+  --n-1: #0b121a; /* superficie hundida: inputs, resumen */
+  --n-2: #111b25; /* superficie del marcador */
+  --n-3: #1a2734; /* superficie elevada: chips, botones, hoja */
+  --n-4: #26394b; /* bordes fuertes */
+  --linea: #1f3141; /* hairline de 1px */
+  --piso: #050a11; /* el surround de la cancha */
 
-  --texto: #f4f7fa;
-  --texto-2: #9fb0c0;
-  --texto-3: #93a5b5; /* 6,1:1 sobre --fondo-2. Antes estaba en 3,9:1. */
+  --t-1: #f4f9fd; /* texto principal */
+  --t-2: #a7bed2; /* texto secundario */
+  --t-3: #7e96ab; /* texto terciario, micro-labels */
 
-  --equipo-a: #4aa8ff;
-  --equipo-b: #ffa64a;
+  /* Cancha: azul de pádel de verdad, con un foco de reflectores al centro. */
+  --cancha-luz: #1e7cbb;
+  --cancha-med: #135a92;
+  --cancha-osc: #0a3a62;
+  --linea-cancha: rgb(255 255 255 / 92%);
+  --linea-cancha-tenue: rgb(255 255 255 / 32%);
+  --red: #f2f8fd;
 
-  --verde: #1fb865;
-  --verde-2: #17a058;
-  --rojo: #e0343c;
-  --rojo-2: #c22a32;
-  --aviso: #ffd23d;
+  /* Pareja A — cian. Pareja B — naranja. */
+  --eq-a: #3bc7e8;
+  --eq-a-fuerte: #1596b8;
+  --eq-a-lavado: rgb(59 199 232 / 15%);
+  /* Fondo del monograma: un velo OSCURO del color del equipo, no un lavado claro.
+     Un lavado claro acerca el fondo al color de la letra y le baja el contraste al 2,7:1;
+     oscurecerlo lo sube a más de 7:1 sin cambiar el lenguaje visual. Es un velo casi opaco
+     porque en horizontal la inicial queda en 22px, que ya es texto normal y necesita 4,5:1. */
+  --eq-a-fondo: rgb(4 20 31 / 78%);
+  /* Tinte claro del color del equipo, para el monograma. Es el mismo tono que el tope
+     superior del degradado de los botones: la inicial va sobre una caja oscura y con el
+     color pleno quedaba en 4,45:1, justo por debajo del 4,5:1 que pide WCAG. */
+  --eq-a-claro: #7fe3f8;
+  --eq-b: #ff8a3c;
+  --eq-b-fuerte: #d1600f;
+  --eq-b-lavado: rgb(255 138 60 / 15%);
+  --eq-b-fondo: rgb(20 9 2 / 78%);
+  --eq-b-claro: #ffb478;
 
-  --radio: 12px;
-  --gap: 8px;
+  /* Amarillo de pelota: SOLO para el saque, los avisos de set/match point y el botón de
+     empezar. Nada más, para que no compita con la pareja B. */
+  --pelota: #ffd34d;
+  --pelota-fuerte: #c89000;
+  --pelota-tinta: #241900;
 
-  /* Todos los tamaños grandes se escalan con el ancho de la pantalla, así el layout
-     se ve igual en un teléfono chico y en uno grande. */
-  --alto-boton: clamp(52px, 15vh, 76px);
-  /* Ninguna zona táctil baja de 44px: se usa con el pulgar, sin Colossal Dedos. */
-  --tam-resultado: clamp(44px, 13vw, 54px);
-  --lateral: clamp(10px, 3vw, 20px);
+  /* Resultado del punto: verde y rojo. Nunca como color de pareja. */
+  --verde: #12a85c;
+  --verde-fuerte: #0b7440;
+  --verde-tinta: #052012;
+  --rojo: #f0473c;
+  --rojo-fuerte: #a52318;
+  --rojo-tinta: #260603;
+
+  /* Escala de dos en dos: 11 / 13 / 15 / 18 / 22 / 30 / 58. */
+  --f-11: 11px;
+  --f-13: 13px;
+  --f-15: 15px;
+  --f-18: 18px;
+  --f-22: 22px;
+  --f-30: 30px;
+  --f-58: 58px;
+
+  --sans: system-ui, -apple-system, 'Segoe UI', Roboto, 'Noto Sans', 'Helvetica Neue', Arial, sans-serif;
+  --mono: ui-monospace, 'SF Mono', 'Roboto Mono', 'DejaVu Sans Mono', Menlo, monospace;
+
+  /* Cifras siempre del mismo ancho: en un marcador, un número que cambia de ancho al
+     pasar de 9 a 10 se lee como un parpadeo. */
+  --cifras: 'tnum' 1, 'lnum' 1;
+
+  --r-chip: 8px;
+  --r-sm: 12px;
+  --r-md: 16px;
+  --r-lg: 22px;
+  --r-full: 999px;
+
+  /* Cuatro niveles de sombra, ninguno genérico. */
+  --s-inside: inset 0 1px 0 rgb(255 255 255 / 7%);
+  --s-piso: 0 1px 0 rgb(255 255 255 / 6%) inset, 0 12px 22px -12px rgb(0 0 0 / 78%);
+  --s-hoja: 0 -2px 0 rgb(255 255 255 / 6%) inset, 0 -28px 56px -22px rgb(0 0 0 / 92%);
+  --s-foco: 0 0 0 2px var(--foco-color, #fff), 0 0 28px -6px var(--foco-color, #fff);
+  --s-boton: inset 0 1px 0 rgb(255 255 255 / 9%), 0 4px 10px -6px rgb(0 0 0 / 70%);
+
+  --alto-minimo: 44px; /* ninguna zona táctil baja de esto */
+  --lateral: 12px;
 }
 
 * {
   box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
 }
 
-/* Cualquier `display` de las clases de abajo pisa al `[hidden]` del navegador, y entonces
-   una vista "oculta" se sigue viendo. Esta regla manda sobre todas. */
 [hidden] {
   display: none !important;
 }
@@ -49,706 +117,1431 @@
 html,
 body {
   margin: 0;
-  height: 100%;
-  overflow: hidden; /* Sin scroll: todo el flujo tiene que caber en pantalla. */
+  padding: 0;
+  background: var(--n-0);
 }
 
-body {
-  background: var(--fondo);
-  color: var(--texto);
-  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
-  font-size: clamp(15px, 4vw, 18px);
-  -webkit-text-size-adjust: 100%;
-  -webkit-tap-highlight-color: transparent;
-}
+/* ============================================================ armazón común */
 
-.app {
+.pantalla {
+  position: relative;
   display: flex;
   flex-direction: column;
-  height: 100dvh;
-  padding: max(var(--lateral), env(safe-area-inset-top)) var(--lateral)
-    max(var(--lateral), env(safe-area-inset-bottom));
-}
-
-/* ---------------------------------------------------------------- botones base */
-
-button {
-  font: inherit;
-  color: inherit;
-  background: var(--fondo-3);
-  border: 1px solid var(--linea);
-  border-radius: var(--radio);
-  padding: 0 14px;
-  min-height: var(--alto-boton);
-  cursor: pointer;
-  touch-action: manipulation; /* Sin retardo de 300ms al tocar. */
-}
-
-button:active:not(:disabled) {
-  transform: scale(0.97);
-}
-
-button:disabled {
-  opacity: 0.4;
-  cursor: default;
-}
-
-.boton-principal {
   width: 100%;
-  background: var(--verde);
-  border-color: var(--verde-2);
-  color: #05220f;
-  font-weight: 700;
+  height: 100dvh;
+  overflow: hidden;
+  padding: 8px var(--lateral) calc(10px + env(safe-area-inset-bottom, 0px));
+  background: var(--n-0);
+  color: var(--t-1);
+  font: 600 var(--f-13) / 1.35 var(--sans);
+  font-variant-numeric: var(--cifras);
 }
 
-.boton-plano {
+/* Las tres vistas existen siempre y sólo una se ve (ver render en ui.js). Cada una
+   ocupa la pantalla entera; sin esto, `.cancha` no tiene alto y desaparece. */
+.creacion,
+.partido,
+.fin {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.partido {
+  display: flex;
+  flex-direction: column;
+}
+
+/* ------------------------------------------------------------------ átomos */
+
+.micro {
+  font: 700 var(--f-11) / 1.1 var(--sans);
+  color: var(--t-3);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.micro--fila {
+  white-space: nowrap;
+}
+
+.equipo-a {
+  color: var(--eq-a);
+}
+
+.equipo-b {
+  color: var(--eq-b);
+}
+
+/* La pelota de pádel, dibujada con CSS: cero dependencias, cero CDN. */
+.pelota {
+  display: inline-block;
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 34% 30%, #fff3c4, var(--pelota) 58%, var(--pelota-fuerte));
+  box-shadow: 0 0 10px -1px rgb(255 211 77 / 70%);
+  flex: none;
+}
+
+.icono {
+  width: 18px;
+  height: 18px;
+  flex: none;
+  fill: none;
+  stroke: currentcolor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.btn__icono {
+  display: inline-flex;
+  flex: none;
+}
+
+/* ================================================================ MARCADOR
+
+   Jerarquía al revés de la anterior: lo que cambia segundo a segundo (el punto del
+   juego) es lo más grande. Los sets ganados, que cambian una vez cada seis games, son
+   lo más chico. Los parciales, en el medio. */
+
+.marcador {
+  flex: none;
+  display: grid;
+  gap: 7px 10px;
+  padding: 10px 11px 9px;
+  border-radius: var(--r-md);
+  background: linear-gradient(180deg, #16222e, var(--n-2));
+  box-shadow: var(--s-piso);
+  border: 1px solid rgb(255 255 255 / 6%);
+  position: relative;
+  overflow: hidden;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas:
+    'eqA eqB'
+    'parciales sets'
+    'puntos puntos'
+    'pie pie';
+}
+
+/* Filete de amarillo de pelota arriba: dice "esto es el marcador" sin gastar un píxel
+   más de alto. */
+.marcador::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--pelota) 20%, var(--pelota) 80%, transparent);
+  opacity: 0.85;
+  pointer-events: none;
+}
+
+/* --- los dos nombres de pareja y la pelota de saque */
+
+.eq {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+  font: 800 var(--f-13) / 1.2 var(--sans);
+  letter-spacing: -0.01em;
+}
+
+.eq--a {
+  grid-area: eqA;
+  color: var(--eq-a);
+}
+
+.eq--b {
+  grid-area: eqB;
+  color: var(--eq-b);
+  justify-content: flex-end;
+}
+
+.eq__nombre {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.eq__saca {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  flex: none;
+  background: var(--pelota);
+  box-shadow: 0 0 0 3px rgb(255 211 77 / 18%);
+}
+
+/* --- parciales de cada set + cuenta de sets */
+
+.marcador__parciales {
+  grid-area: parciales;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: var(--alto-minimo);
+  min-width: 0;
+}
+
+.parciales {
+  display: flex;
+  gap: 5px;
+  flex: none;
+  min-width: 0;
+  flex-wrap: wrap;
+}
+
+/* Cada set es una cajita con sus dos números. Los dos números son botones separados por
+   un guion que no es presionable: tocar el "6" edita los juegos de A y tocar el "3" los de
+   B. Son la única vía de corrección que hay (no hay deshacer), así que van a 48px de alto
+   y 42 de ancho: hay que poder apuntar el número sin precisar. */
+.parcial {
+  display: inline-flex;
+  align-items: stretch;
+  gap: 2px;
+  height: 48px;
+  padding: 0 4px;
+  border: 1px solid var(--linea);
+  border-radius: var(--r-chip);
+  background: var(--n-3);
+  box-shadow: var(--s-inside);
+}
+
+.parcial__guion {
+  display: grid;
+  place-items: center;
+  color: var(--t-3);
+  font: 800 var(--f-15) / 1 var(--sans);
+  pointer-events: none;
+}
+
+.parcial button {
+  min-width: 42px;
+  min-height: 44px;
+  padding: 0 6px;
+  border: 0;
+  border-radius: 7px;
   background: transparent;
+  color: var(--t-1);
+  font: 800 var(--f-15) / 1 var(--sans);
+  font-variant-numeric: var(--cifras);
+  box-shadow: none;
 }
 
-/* ---------------------------------------------------------------- creación */
+.parcial button:active {
+  background: rgb(255 255 255 / 9%);
+}
+
+.parcial button:disabled {
+  opacity: 0.75;
+}
+
+/* El set en curso: se levanta y toma el color de la pareja que lo gana. */
+.parcial--curso {
+  background: var(--n-4);
+  border-color: rgb(255 255 255 / 20%);
+  box-shadow: var(--s-inside), 0 0 0 1px rgb(255 255 255 / 6%);
+}
+
+.parcial--curso .parcial__a {
+  color: var(--eq-a);
+}
+
+.parcial--curso .parcial__b {
+  color: var(--eq-b);
+}
+
+/* Cuenta de sets: chica a propósito. Es lo menos informativo del marcador, y por eso va
+   en cajas chicas con el color de cada pareja, no con números grandes. Si se inventa el
+   tamaño, vuelve a mandar lo que no importa. */
+
+.sets {
+  grid-area: sets;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  white-space: nowrap;
+  flex: none;
+  min-width: 0;
+}
+
+.sets__caja {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 9px;
+  font: 800 var(--f-15) / 1 var(--sans);
+}
+
+.sets__caja--a {
+  color: var(--eq-a);
+  background: var(--eq-a-lavado);
+  box-shadow: inset 0 0 0 1px rgb(59 199 232 / 30%);
+}
+
+.sets__caja--b {
+  color: var(--eq-b);
+  background: var(--eq-b-lavado);
+  box-shadow: inset 0 0 0 1px rgb(255 138 60 / 30%);
+}
+
+.sets__txt {
+  font: 700 var(--f-11) / 1 var(--sans);
+  color: var(--t-3);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+/* --- el punto del juego. El héroe. */
+
+.marcador__puntos {
+  grid-area: puntos;
+  display: flex;
+  align-items: stretch;
+  justify-content: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.punto {
+  flex: 1 1 0;
+  max-width: 148px;
+  height: 78px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid transparent;
+  border-radius: var(--r-sm);
+  font: 800 var(--f-58) / 1 var(--sans);
+  letter-spacing: -0.02em;
+  min-width: 0;
+}
+
+.punto--a {
+  color: #062430;
+  background: linear-gradient(180deg, #74deff, var(--eq-a));
+  box-shadow: 0 6px 16px -10px var(--eq-a), var(--s-inside);
+}
+
+.punto--b {
+  color: #2e1400;
+  background: linear-gradient(180deg, #ffb478, var(--eq-b));
+  box-shadow: 0 6px 16px -10px var(--eq-b), var(--s-inside);
+}
+
+/* Cuando el valor no es un número ("iguales", "ventaja", "—") no entra en 58px: se
+   achica, porque un texto largo en 58px desborda la caja. */
+.punto--etiqueta {
+  font-size: var(--f-30);
+  letter-spacing: 0;
+}
+
+/* El dato que se está editando se levanta. */
+.punto--activo {
+  outline: 2px solid var(--t-1);
+  outline-offset: 2px;
+}
+
+.punto:disabled {
+  filter: saturate(0.5) brightness(0.78);
+}
+
+.punto__medio {
+  align-self: center;
+  flex: none;
+  font: 700 var(--f-11) / 1 var(--sans);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--t-3);
+}
+
+/* --- saque y avisos */
+
+.marcador__pie {
+  grid-area: pie;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 20px;
+  min-width: 0;
+}
+
+.saca {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font: 700 var(--f-11) / 1.2 var(--sans);
+  /* --t-1 y no --t-2: en horizontal el saque vive en el piso de la cancha, que es donde el
+     velo de la hoja ya está al 72% de negro. Con --t-2 quedaba en 3,9:1 con la hoja
+     abierta. */
+  color: var(--t-1);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  min-width: 0;
+}
+
+.saca__txt {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Píldora de amarillo de pelota. Sólo para avisos: set point, match point, y por qué
+   terminó el partido. */
+.chip-alerta {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 22px;
+  padding: 0 9px;
+  border-radius: var(--r-full);
+  background: var(--pelota);
+  color: var(--pelota-tinta);
+  font: 800 var(--f-11) / 1 var(--sans);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  flex: none;
+}
+
+/* ------------------------------------------------------------ editor inline
+
+   Abre debajo del dato tocado, dentro del marcador: el marcador crece y la cancha se
+   achuca. No aparece nada por encima ni tapa la cancha. */
+
+.editor {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 8px;
+  border-radius: var(--r-sm);
+  background: var(--n-3);
+  border: 1px dashed rgb(255 255 255 / 20%);
+  min-width: 0;
+}
+
+.editor--vacio {
+  font-weight: 600;
+  color: var(--t-2);
+}
+
+.editor__rotulo {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  flex: none;
+  padding-right: 4px;
+  min-width: 0;
+}
+
+.editor__valor {
+  font: 800 var(--f-15) / 1.1 var(--sans);
+  color: var(--eq-a);
+  max-width: 84px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.editor__opciones {
+  display: flex;
+  gap: 6px;
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.editor__opciones::-webkit-scrollbar {
+  display: none;
+}
+
+.opcion {
+  flex: 1 1 0;
+  min-width: var(--alto-minimo);
+  height: 46px;
+  border: 1px solid var(--linea);
+  border-radius: var(--r-chip);
+  background: var(--n-2);
+  color: var(--t-1);
+  font: 800 var(--f-18) / 1 var(--sans);
+  box-shadow: var(--s-inside);
+}
+
+.editor__cerrar {
+  flex: none;
+  width: var(--alto-minimo);
+  height: 46px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--linea);
+  border-radius: var(--r-chip);
+  background: var(--n-2);
+  color: var(--t-2);
+}
+
+/* ==================================================================== CANCHA
+
+   No es un grid de 4 cajas: es una cancha. Línea de fondo, línea de saque, eje central
+   y red, en blanco, con la proporción que se pueda. Las fichas de los jugadores se
+   apoyan encima, como fichas sobre un dibujo. */
+
+.cancha {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+  margin-top: 9px;
+  border-radius: var(--r-lg);
+  overflow: hidden;
+  isolation: isolate;
+  background:
+    radial-gradient(70% 120% at 0% 50%, rgb(59 199 232 / 12%), transparent 60%),
+    radial-gradient(70% 120% at 100% 50%, rgb(255 138 60 / 12%), transparent 60%),
+    var(--piso);
+  box-shadow: var(--s-piso), inset 0 0 70px -18px rgb(0 0 0 / 90%);
+}
+
+.cancha__tabla {
+  position: absolute;
+  inset: 0;
+  background:
+    /* grano de la arena: puntitos, no rayas */
+    radial-gradient(circle at 1px 1px, rgb(255 255 255 / 3%) 1px, transparent 1.4px) 0 0 / 4px 4px,
+    /* una banda de luz de reflectores, en diagonal */
+    linear-gradient(112deg, rgb(255 255 255 / 0%) 38%, rgb(255 255 255 / 6%) 50%, rgb(255 255 255 / 0%) 62%),
+    radial-gradient(112% 80% at 50% 50%, var(--cancha-luz) 0%, var(--cancha-med) 55%, var(--cancha-osc) 100%);
+}
+
+/* Un foco del color de cada pareja donde está cada jugador. Conecta la ficha con la
+   cancha y evita que el azul se lea como un rectángulo plano: la cancha tiene cuatro
+   zonas de juego, no dos bandas vacías. */
+.cancha__tabla::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(34% 13% at 26% 16%, rgb(59 199 232 / 26%), transparent 72%),
+    radial-gradient(34% 13% at 74% 16%, rgb(59 199 232 / 26%), transparent 72%),
+    radial-gradient(34% 13% at 26% 84%, rgb(255 138 60 / 24%), transparent 72%),
+    radial-gradient(34% 13% at 74% 84%, rgb(255 138 60 / 24%), transparent 72%);
+}
+
+/* Viñeta: apaga los bordes y hace que la cancha se vea iluminada desde arriba. */
+.cancha__tabla::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(86% 64% at 50% 46%, transparent 44%, rgb(0 10 22 / 46%) 100%);
+}
+
+/* Doble línea de fondo, como en una cancha de verdad. */
+.cancha__borde {
+  position: absolute;
+  inset: 8px;
+  border: 2px solid var(--linea-cancha);
+  border-radius: 14px;
+  pointer-events: none;
+  box-shadow: 0 0 0 6px rgb(2 12 22 / 26%);
+}
+
+.cancha__borde::after {
+  content: '';
+  position: absolute;
+  inset: 5px;
+  border: 1px solid var(--linea-cancha-tenue);
+  border-radius: 9px;
+}
+
+/* Líneas de saque. Las posiciones salen de la geometría de la cancha real
+   (fondo → 3,50 m → línea de saque → 3,40 m → red → 3,40 m → línea de saque). */
+.cancha__lineas {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.cancha__lineas::before,
+.cancha__lineas::after {
+  content: '';
+  position: absolute;
+  background: var(--linea-cancha);
+  opacity: 0.85;
+}
+
+.cancha__lineas::before,
+.cancha__lineas::after {
+  left: 7px;
+  right: 7px;
+  height: 2px;
+}
+
+.cancha__lineas::before {
+  top: 34.4%;
+}
+
+.cancha__lineas::after {
+  bottom: 34.4%;
+}
+
+/* Eje central: va de línea de saque a línea de saque. */
+.cancha__eje {
+  position: absolute;
+  left: 50%;
+  width: 2px;
+  top: 34.4%;
+  height: 31.2%;
+  transform: translateX(-1px);
+  pointer-events: none;
+  background: var(--linea-cancha);
+  opacity: 0.9;
+}
+
+/* La red: cinta blanca arriba, malla oscura abajo, con sombra. Y los dos postes, que
+   son los que hacen que el medio de la cancha se lea como "la zona de la red". */
+.red {
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+  filter: drop-shadow(0 6px 8px rgb(0 8 18 / 55%));
+}
+
+.red::before,
+.red::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  width: 4px;
+  height: 34px;
+  background: linear-gradient(180deg, rgb(255 255 255 / 78%), rgb(255 255 255 / 16%));
+}
+
+.red::before {
+  left: 0;
+}
+
+.red::after {
+  right: 0;
+}
+
+.red__cinta {
+  height: 3px;
+  background: var(--red);
+  box-shadow: 0 0 14px rgb(255 255 255 / 45%);
+}
+
+.red__malla {
+  height: 14px;
+  background:
+    repeating-linear-gradient(90deg, rgb(255 255 255 / 40%) 0 1px, transparent 1px 4px),
+    linear-gradient(180deg, rgb(4 14 26 / 62%), rgb(4 14 26 / 88%));
+}
+
+/* --------------------------------------------------------------- las fichas
+
+   Los dos de arriba a la izquierda, los dos de abajo a la derecha: la rotación real
+   del pádel, y además despeja el pasillo del medio.
+
+   La ficha es un <div>, no un <button>: los dos botones de resultado son hermanos del
+   botón del nombre, no hijos. Meter un <button> dentro de otro es HTML inválido y el
+   parser cierra el de afuera (la app ya se quemó con eso). El botón del nombre es
+   `.ficha__hit` y ocupa toda la ficha. */
+
+.fichas {
+  position: absolute;
+  inset: 0;
+}
+
+.fichas__par {
+  position: absolute;
+  display: grid;
+}
+
+.fichas__par--arriba {
+  left: 18px;
+  right: 18px;
+  /* En porcentaje del alto de la cancha, no en píxeles: cuando el editor inline crece el
+     marcador y la cancha se achuca, las fichas se achucan con ella en vez de comerse la
+     línea de saque. */
+  height: 30%;
+  min-height: 150px;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-rows: 100%;
+  gap: 18px;
+  top: 9px;
+}
+
+.fichas__par--abajo {
+  left: 18px;
+  right: 18px;
+  height: 30%;
+  min-height: 150px;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-rows: 100%;
+  gap: 18px;
+  bottom: 9px;
+}
+
+.ficha {
+  --equipo: var(--eq-a);
+  --lavado: var(--eq-a-lavado);
+  --fondo-mono: var(--eq-a-fondo);
+  --mono-texto: var(--eq-a-claro);
+  position: relative;
+  display: flex;
+  min-width: 0; /* como ítem del grid tiene que poder encogerse más allá del min-content */
+  padding: 9px;
+  border: 1px solid rgb(255 255 255 / 13%);
+  border-radius: var(--r-md);
+  background: linear-gradient(160deg, #24404f 0%, #16242f 55%, #0d1821 100%);
+  box-shadow: var(--s-piso);
+  color: var(--t-1);
+  overflow: hidden;
+}
+
+.ficha--b {
+  --equipo: var(--eq-b);
+  --lavado: var(--eq-b-lavado);
+  --fondo-mono: var(--eq-b-fondo);
+  --mono-texto: var(--eq-b-claro);
+}
+
+/* Filete del color de la pareja en el borde que mira a la red: identifica al equipo sin
+   gritar, y separa la ficha del azul de la cancha. */
+.ficha::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  border-left: 4px solid var(--equipo);
+  pointer-events: none;
+}
+
+.ficha--abajo::before {
+  border-left: 0;
+  border-right: 4px solid var(--equipo);
+}
+
+/* El botón del nombre: es lo que se toca para elegir jugador. 44px mínimo aunque esté
+   elegido, porque el "cancelar" implícito es tocar otro jugador. */
+.ficha__hit {
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: var(--alto-minimo);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 7px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  text-transform: none;
+  letter-spacing: normal;
+}
+
+.ficha--abajo .ficha__hit {
+  align-items: flex-end;
+  text-align: right;
+}
+
+.ficha__mono {
+  flex: none;
+  width: 84px;
+  height: 84px;
+  display: grid;
+  place-items: center;
+  border-radius: 25px;
+  background: var(--fondo-mono);
+  border: 1px solid rgb(255 255 255 / 12%);
+  color: var(--mono-texto);
+  font: 800 var(--f-30) / 1 var(--sans);
+}
+
+.ficha__nombre {
+  min-width: 0;
+  max-width: 100%;
+  font: 800 var(--f-15) / 1.15 var(--sans);
+  letter-spacing: -0.01em;
+  overflow-wrap: break-word;
+  hyphens: auto;
+}
+
+/* Los nombres largos bajan un escalón antes que cortarse. */
+.ficha__nombre--largo {
+  font-size: var(--f-13);
+  line-height: 1.2;
+}
+
+/* Los botones de resultado: hermanos del botón del nombre, no hijos. */
+.ficha__acciones {
+  display: none;
+  flex: none;
+  gap: 6px;
+  width: 100%;
+  min-height: 0;
+}
+
+.resultado {
+  flex: 1 1 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  /* Ni con el nombre más largo el botón baja de 56px de ancho: sin este mínimo, en la
+     ficha elegida los botones se angostan a 20px y quedan imposibles de apuntar. El
+     nombre es lo que se encoge, no el botón. */
+  min-width: 56px;
+  min-height: var(--alto-minimo);
+  padding: 0 8px;
+  border: 1px solid transparent;
+  border-radius: var(--r-sm);
+  font: 800 var(--f-15) / 1 var(--sans);
+  letter-spacing: -0.01em;
+  box-shadow: var(--s-inside), 0 4px 12px -6px rgb(0 0 0 / 60%);
+}
+
+.resultado--verde {
+  background: linear-gradient(180deg, #3ecb7e, var(--verde));
+  border-color: var(--verde-fuerte);
+  color: var(--verde-tinta);
+}
+
+.resultado--rojo {
+  background: linear-gradient(180deg, #f56a5f, var(--rojo));
+  border-color: var(--rojo-fuerte);
+  color: var(--rojo-tinta);
+}
+
+.resultado__glifo {
+  font: 900 var(--f-18) / 1 var(--sans);
+  flex: none;
+}
+
+/* Estado elegido: aro del color del equipo + fondo un escalón más arriba. */
+.ficha--elegida {
+  border-color: var(--equipo);
+  background: linear-gradient(160deg, #2b4759 0%, #182a36 55%, #0e1c26 100%);
+  box-shadow: var(--s-piso), var(--s-foco);
+  --foco-color: var(--equipo);
+  z-index: 3;
+}
+
+/* La atenuación de las fichas no elegidas baja a 0.78, no más: a 0.5 el nombre quedaba
+   en 3.5:1 sobre la cancha. */
+.fichas--con-foco .ficha:not(.ficha--elegida) {
+  opacity: 0.78;
+}
+
+/* Elegida: encabezado compacto (monograma chico + nombre) y los dos botones al lado.
+   Todo entra en los ~170px de alto de la fila. */
+.ficha--elegida {
+  justify-content: flex-start;
+  gap: 7px;
+  padding: 9px;
+}
+
+.ficha--elegida .ficha__hit {
+  /* El encabezado toma lo que necesita y los botones se llevan el resto. Con el reparto
+     al revés el nombre se quedaba sin ancho y partía "Gabi" en tres líneas. */
+  flex: 0 1 auto;
+  flex-direction: row;
+  justify-content: flex-start;
+  gap: 8px;
+  min-width: 0;
+}
+
+.ficha--elegida .ficha__mono {
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
+  font-size: var(--f-15);
+}
+
+.ficha--elegida .ficha__nombre {
+  font-size: var(--f-13);
+  line-height: 1.2;
+  text-align: left;
+  /* Con el nombre al lado del monograma no hay ancho para partir la palabra: mejor un
+     puntito suspensivo que tres renglones de una letra. */
+  overflow: hidden;
+  overflow-wrap: normal;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.ficha--elegida .ficha__acciones {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-width: 62px;
+  width: auto;
+}
+
+.ficha--elegida .resultado {
+  padding: 0 6px;
+  font-size: var(--f-13);
+}
+
+/* Con el nombre largo, la etiqueta "Ganó"/"Falló" no entra al lado del monograma: se queda
+   sólo el glifo, que sigue siendo obvio por color y por forma. Sin esto el texto se sale
+   de la caja del botón. El aviso va en `.ficha` (el ancestro común del nombre y de los
+   botones), no en el nombre. */
+.ficha--largo .resultado span:not(.resultado__glifo) {
+  display: none;
+}
+
+/* ------------------------------------------- el piso de la cancha
+
+   En vertical no hay piso: el saque y los avisos viven en el pie del marcador. En
+   horizontal el marcador es un riel de 70px y no entra, así que bajan acá, que en
+   horizontal sobra a los lados. El texto se escribe en los dos lugares y la orientación
+   muestra uno. */
+
+.piso-info {
+  display: none;
+  position: absolute;
+  align-items: flex-start;
+  gap: 8px;
+  pointer-events: none;
+}
+
+/* ============================================================ BARRA DE ACCIONES */
+
+.acciones {
+  flex: none;
+  display: flex;
+  gap: 8px;
+  margin-top: 9px;
+}
+
+.btn {
+  flex: 1 1 0;
+  min-width: 0;
+  min-height: 52px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 0 10px;
+  border: 1px solid rgb(255 255 255 / 9%);
+  border-radius: var(--r-sm);
+  background: linear-gradient(180deg, #1d2b39, var(--n-3));
+  color: var(--t-1);
+  font: 700 var(--f-15) / 1 var(--sans);
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+  box-shadow: var(--s-boton);
+}
+
+.btn--fantasma {
+  background: transparent;
+  border-color: transparent;
+  box-shadow: none;
+  color: var(--t-2);
+}
+
+.btn--pelota {
+  background: linear-gradient(180deg, #ffe08a, var(--pelota));
+  border-color: var(--pelota-fuerte);
+  color: var(--pelota-tinta);
+  font-weight: 800;
+  box-shadow: 0 6px 18px -10px rgb(255 211 77 / 90%), var(--s-inside);
+}
+
+.btn--peligro {
+  color: #ff9d95;
+  background: linear-gradient(180deg, #24232d, #1b1a24);
+  border-color: rgb(255 91 80 / 28%);
+}
+
+.btn--alto {
+  min-height: 56px;
+}
+
+/* Las acciones del final de partido: "Copiar resumen" toma el ancho entero porque es lo
+   único que se hace después de que termina. */
+.acciones--fin {
+  flex-direction: column;
+  gap: 8px;
+}
+
+.acciones__par {
+  display: flex;
+  gap: 8px;
+}
+
+.acciones__par .btn {
+  min-width: 0;
+  white-space: nowrap;
+}
+
+/* ================================================================ CREACIÓN
+
+   Tarjetas por pareja, con el color de la pareja haciendo de label de la tarjeta.
+   Opciones como botones, no como <select>: se tocan, no se abren. */
 
 .creacion {
   display: flex;
-  margin: 0;
   flex-direction: column;
-  gap: 14px;
-  overflow-y: auto; /* La creación sí puede scrollear: es la única pantalla con scroll. */
-  padding-bottom: 12px;
+  gap: 9px;
+  height: 100%;
+  overflow-y: auto;
+  padding-bottom: 10px;
+  scrollbar-width: thin;
 }
 
-.creacion h1 {
-  margin: 4px 0 0;
-  font-size: 1.35em;
+.creacion__campos {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  /* `flex: none`: como ítem de un flex column con `overflow-y: auto` arriba, sin esto la
+     caja se encogía al alto disponible y las tarjetas de pareja —que tienen
+     `overflow: hidden` para el filete— recortaban el campo "Jugador 2". Perder un campo de
+     texto no es un detalle: es el nombre de un jugador. */
+  flex: none;
+  min-height: 0;
+}
+
+.creacion__titulo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex: none;
+  padding: 2px 2px 0;
+}
+
+.creacion__titulo h1 {
+  margin: 0;
+  font: 800 var(--f-22) / 1 var(--sans);
+  letter-spacing: -0.02em;
+  white-space: nowrap;
 }
 
 .creacion__pareja {
-  background: var(--fondo-2);
-  border: 1px solid var(--linea);
-  border-radius: var(--radio);
-  padding: 12px;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.creacion__rotulo {
-  margin: 0;
-  font-size: 0.85em;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--texto-2);
-}
-
-.creacion__pareja--a {
-  border-left: 4px solid var(--equipo-a);
+  --equipo: var(--eq-a);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 7px 8px;
+  padding: 10px 10px 11px;
+  border-radius: var(--r-md);
+  background: linear-gradient(165deg, #18242f, var(--n-2));
+  border: 1px solid rgb(255 255 255 / 8%);
+  box-shadow: var(--s-piso);
+  position: relative;
+  overflow: hidden;
+  flex: none;
 }
 
 .creacion__pareja--b {
-  border-left: 4px solid var(--equipo-b);
+  --equipo: var(--eq-b);
 }
 
-input[type='text'],
-select {
-  font: inherit;
-  color: var(--texto);
-  background: var(--fondo);
-  border: 1px solid var(--linea);
-  border-radius: 10px;
-  padding: 12px;
-  width: 100%;
-  min-height: 48px;
+/* La franja del color de la pareja arriba de la tarjeta: mismo lenguaje que las fichas
+   de la cancha. */
+.creacion__pareja::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto;
+  height: 3px;
+  background: var(--equipo);
+  opacity: 0.92;
 }
 
-input::placeholder {
-  color: var(--texto-3);
-}
-
-.creacion__opciones {
+.creacion__rotulo {
+  grid-column: 1 / -1;
   display: flex;
-  flex-direction: column;
-  gap: 10px;
+  align-items: center;
+  gap: 7px;
+  font: 700 var(--f-11) / 1 var(--sans);
+  color: var(--equipo);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.creacion__punto {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--equipo);
+  flex: none;
 }
 
 .campo {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 5px;
+  min-width: 0;
+}
+
+.campo--ancho {
+  grid-column: 1 / -1;
 }
 
 .campo > span {
-  font-size: 0.8em;
-  color: var(--texto-2);
-}
-
-.aviso-mini {
-  margin: 0;
-  font-size: 0.85em;
-  color: var(--texto-2);
-  text-align: center;
-}
-
-/* ---------------------------------------------------------------- marcador */
-
-.partido,
-.fin {
-  display: flex;
-  flex-direction: column;
-  flex: 1 1 auto;
-  min-height: 0;
-}
-
-.marcador {
-  background: var(--fondo-2);
-  border: 1px solid var(--linea);
-  border-radius: var(--radio);
-  padding: 8px 10px;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  flex: 0 0 auto; /* Nunca crece ni se comprime: el marcador está siempre arriba. */
-}
-
-.marcador__sets {
-  display: grid;
-  grid-template-columns: 1fr auto 1fr;
-  align-items: center;
-  gap: 6px;
-}
-
-.marcador__equipo {
-  font-size: 0.8em;
-  color: var(--texto-2);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.marcador__equipo--b {
-  text-align: right;
-}
-
-.marcador__cuenta {
-  display: flex;
-  align-items: baseline;
-  gap: 4px;
-  font-variant-numeric: tabular-nums;
-}
-
-.marcador__cuenta b {
-  font-size: 1.5em;
-  line-height: 1;
-}
-
-.marcador__cuenta span {
-  color: var(--texto-3);
-}
-
-/* Parciales: los sets, uno por botón, con el en curso destacado. */
-.parciales {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-  align-items: center;
-  justify-content: center;
-}
-
-.parcial {
-  display: inline-flex;
-  align-items: center;
-  gap: 2px;
-}
-
-/* Cada número es su propio botón, con 44px de alto: es la única vía de corrección que hay
-   (no hay deshacer), así que hay que poder apuntar el número sin precisar. */
-.parcial button {
-  min-height: 44px;
-  min-width: 42px;
-  padding: 0 6px;
-  font-size: 0.95em;
-  font-variant-numeric: tabular-nums;
-}
-
-.parcial__guion {
-  color: var(--texto-3);
-  font-size: 0.8em;
-  pointer-events: none;
-}
-
-.parcial--en-curso {
-  border-color: var(--texto-2);
-  font-weight: 700;
-}
-
-.parcial--tension {
-  border-color: var(--equipo-b);
-  color: var(--equipo-b);
-  font-weight: 700;
-}
-
-.puntos {
-  display: grid;
-  grid-template-columns: 1fr auto 1fr;
-  align-items: stretch;
-  gap: 6px;
-}
-
-.punto {
-  min-height: clamp(44px, 12vh, 60px);
-  font-size: 1.5em;
-  font-weight: 700;
-  font-variant-numeric: tabular-nums;
-  padding: 0 6px;
-}
-
-.punto--a {
-  border-color: var(--equipo-a);
-  color: var(--equipo-a);
-  justify-self: start;
-  min-width: 84px;
-}
-
-.punto--b {
-  border-color: var(--equipo-b);
-  color: var(--equipo-b);
-  justify-self: end;
-  min-width: 84px;
-}
-
-.punto--etiqueta {
-  font-size: 1em;
-  min-width: 96px;
-}
-
-.puntos__vs {
-  display: grid;
-  place-items: center;
-  color: var(--texto-3);
-  font-size: 0.75em;
-  letter-spacing: 0.08em;
+  font: 700 var(--f-11) / 1 var(--sans);
+  color: var(--t-3);
+  letter-spacing: 0.09em;
   text-transform: uppercase;
 }
 
-.marcador__pie {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 6px;
-  font-size: 0.8em;
-  color: var(--texto-2);
-}
-
-.tie-break-tag {
-  padding: 2px 8px;
-  border: 1px dashed var(--aviso);
-  border-radius: 999px;
-  color: var(--aviso);
-  font-size: 0.9em;
-  letter-spacing: 0.04em;
-}
-
-.aviso-punto {
-  padding: 2px 8px;
-  border-radius: 999px;
-  background: var(--aviso);
-  color: #241a00;
-  font-weight: 700;
-}
-
-.aviso-fin {
-  font-weight: 700;
-  color: var(--verde);
-}
-
-/* ---------------------------------------------------------------- editor inline */
-
-.editor {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  align-items: center;
-  padding: 6px;
-  background: var(--fondo-3);
-  border: 1px dashed var(--texto-3);
-  border-radius: 10px;
-}
-
-.editor__actual {
-  font-size: 0.8em;
-  color: var(--texto-2);
-  padding-right: 4px;
-}
-
-.editor button {
-  min-height: 46px;
-  min-width: 52px;
-  padding: 0 12px;
-  font-weight: 700;
-  font-variant-numeric: tabular-nums;
-}
-
-.editor--vacio {
-  color: var(--texto-3);
-  font-size: 0.85em;
-  justify-content: center;
-  border-style: solid;
-}
-
-/* ---------------------------------------------------------------- cancha */
-
-.cancha {
-  flex: 1 1 auto;
-  min-height: 0; /* Necesario para que flexbox permita achicar dentro de la pantalla. */
-  display: grid;
-  gap: var(--gap);
-  padding: var(--gap);
-  margin-top: var(--gap);
-  background: var(--fondo-2);
-  border: 1px solid var(--linea);
-  border-radius: var(--radio);
-  /* `minmax(0, 1fr)` y no `1fr`: con `1fr` la pista toma como mínimo el min-content del
-     ítem, y un nombre largo inflaba la columna hasta empujar la cancha fuera de pantalla. */
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  grid-template-rows: 1fr 1fr;
-}
-
-/* La celda es un contenedor: el nombre es el botón y los botones de resultado van encima.
-   Vertical: los 2 de arriba a la izquierda, los 2 de abajo a la derecha (RF-40). */
-.jugador {
-  position: relative;
-  display: flex;
-  align-items: stretch;
-  min-width: 0; /* Como ítem del grid tiene que poder encogerse más allá del min-content. */
-  min-height: var(--alto-boton);
-  border-width: 2px;
-  border-style: solid;
-  border-color: var(--linea);
-}
-
-.jugador__nombre {
-  flex: 1 1 auto;
+.campo > input[type='text'] {
+  width: 100%;
   min-width: 0;
+  min-height: 50px;
+  padding: 0 12px;
+  border: 1px solid var(--linea);
+  border-radius: var(--r-sm);
+  background: var(--n-1);
+  color: var(--t-1);
+  font: 700 var(--f-15) / 1.2 var(--sans);
+  outline: none;
+}
+
+.campo > input[type='text']::placeholder {
+  color: var(--t-3);
+  font-weight: 600;
+}
+
+.opciones {
   display: flex;
-  align-items: center;
-  border: 0;
-  border-radius: inherit;
-  background: transparent;
-  font-size: clamp(16px, 5vw, 22px);
-  font-weight: 700;
+  flex-direction: column;
+  gap: 9px;
+  padding: 10px;
+  border-radius: var(--r-md);
+  background: var(--n-2);
+  border: 1px solid rgb(255 255 255 / 8%);
+  box-shadow: var(--s-inside);
+  flex: none;
+}
+
+.opciones__bloque {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.opciones__rotulo {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  font: 700 var(--f-11) / 1 var(--sans);
+  color: var(--t-3);
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+
+.opciones__pista {
+  color: var(--t-3);
+  opacity: 0.85;
+  letter-spacing: 0.03em;
+  text-transform: none;
+  font-weight: 600;
+  text-align: right;
+}
+
+.segmento {
+  display: grid;
+  gap: 6px;
+}
+
+.segmento--3 {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.segmento--2 {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.opcion-set {
+  min-width: 0;
+  min-height: 52px;
   padding: 0 6px;
-}
-
-.jugador--a {
-  border-color: var(--equipo-a);
-  background: color-mix(in srgb, var(--equipo-a) 14%, var(--fondo-2));
-}
-
-.jugador--b {
-  border-color: var(--equipo-b);
-  background: color-mix(in srgb, var(--equipo-b) 14%, var(--fondo-2));
-}
-
-/* Arriba a la izquierda, abajo a la derecha (RF-40). */
-.jugador--arriba .jugador__nombre {
-  justify-content: flex-start;
-}
-
-.jugador--abajo .jugador__nombre {
-  justify-content: flex-end;
-}
-
-.jugador--seleccionado {
-  outline: 3px solid var(--texto);
-  outline-offset: -3px;
-}
-
-/* Con el jugador seleccionado, el nombre se dibuja en el hueco que dejan los dos botones.
-   Este padding ya NO infla la pista del grid: las pistas son minmax(0, 1fr) y el nombre
-   tiene min-width: 0, así que se encoge con puntos suspensivos en vez de empujar la cancha. */
-.jugador--seleccionado .jugador__nombre {
-  padding: 0 calc(var(--tam-resultado) + 4px);
+  border: 1px solid var(--linea);
+  border-radius: var(--r-sm);
+  background: var(--n-3);
+  color: var(--t-1);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
   justify-content: center;
+  gap: 1px;
+  font: 800 var(--f-15) / 1.1 var(--sans);
+  box-shadow: var(--s-inside);
+}
+
+.opcion-set__nota {
+  font-size: var(--f-11);
+  color: var(--t-3);
+  font-weight: 600;
   text-align: center;
 }
 
-.jugador__nombre {
+.opcion-set--elegida {
+  background: linear-gradient(180deg, #ffe08a, var(--pelota));
+  border-color: var(--pelota-fuerte);
+  color: var(--pelota-tinta);
+  box-shadow: 0 0 0 1px rgb(255 211 77 / 40%), 0 6px 16px -10px rgb(255 211 77 / 80%);
+}
+
+.opcion-set--elegida .opcion-set__nota {
+  color: #6d5000;
+}
+
+/* Quién saca: dos botones con el color de la pareja. Los colores del botón elegido están
+   precomputados (no `color-mix`): apuntamos a teléfonos viejos. */
+.saca-btn {
+  --equipo: var(--eq-a);
+  min-width: 0;
+  min-height: 56px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  padding: 0 8px;
+  border: 1px solid var(--linea);
+  border-radius: var(--r-sm);
+  background: var(--n-3);
+  color: var(--t-1);
+  font: 800 var(--f-15) / 1.15 var(--sans);
+  box-shadow: var(--s-inside);
+}
+
+.saca-btn--b {
+  --equipo: var(--eq-b);
+}
+
+.saca-btn__punto {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--equipo);
+  flex: none;
+}
+
+.saca-btn__nota {
+  font-size: var(--f-11);
+  font-weight: 600;
+  color: var(--t-3);
+  text-align: center;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  max-width: 100%;
 }
 
-/* Capa de los dos botones: tapa la celda entera sin ocupar lugar en el flujo, así que el
-   nombre no necesita padding y la celda no cambia de tamaño al seleccionar. */
-.jugador__acciones {
-  position: absolute;
-  inset: 0;
-  display: none;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 2px;
-  pointer-events: none; /* Solo los botones reciben el toque. */
+/* Pareja A elegida: cian lavado. Pareja B elegida: naranja lavado. */
+.saca-btn--a.saca-btn--elegida {
+  background: linear-gradient(165deg, #1b3a47, #131e29);
+  border-color: var(--eq-a);
+  box-shadow: var(--s-inside), 0 0 0 1px rgb(59 199 232 / 32%);
 }
 
-.jugador--seleccionado .jugador__acciones {
+.saca-btn--a.saca-btn--elegida .saca-btn__nota {
+  color: #a9e8f8;
+}
+
+.saca-btn--b.saca-btn--elegida {
+  background: linear-gradient(165deg, #432a17, #131e29);
+  border-color: var(--eq-b);
+  box-shadow: var(--s-inside), 0 0 0 1px rgb(255 138 60 / 32%);
+}
+
+.saca-btn--b.saca-btn--elegida .saca-btn__nota {
+  color: #ffc79c;
+}
+
+.creacion__pie {
   display: flex;
+  flex-direction: column;
+  gap: 7px;
+  flex: none;
 }
 
-/* Verde y rojo: por encima de la celda, sin ocupar lugar en el flujo. */
-.resultado {
-  width: var(--tam-resultado);
-  height: var(--tam-resultado);
-  min-height: var(--tam-resultado);
-  padding: 0;
-  border-radius: 50%;
-  font-size: clamp(18px, 5vw, 24px);
-  font-weight: 700;
-  display: grid;
-  place-items: center;
-  pointer-events: auto;
+.creacion__pista {
+  text-align: center;
 }
 
-.resultado--verde {
-  background: var(--verde);
-  border-color: var(--verde-2);
-  color: #04240f;
-}
+/* ============================================================ HOJA DE MOVIMIENTOS
 
-.resultado--rojo {
-  background: var(--rojo);
-  border-color: var(--rojo-2);
-  color: #fff;
-}
-
-
-
-
-
-/* ---------------------------------------------------------------- acciones */
-
-.acciones {
-  flex: 0 0 auto;
-  display: flex;
-  gap: 6px;
-  margin-top: var(--gap);
-}
-
-.acciones button {
-  flex: 1 1 0;
-  min-height: 48px;
-  font-size: 0.9em;
-}
-
-.acciones .peligro {
-  border-color: var(--rojo-2);
-  color: #ff8d92;
-}
-
-/* ---------------------------------------------------------------- modal */
+   Va abajo, no en el centro. Así tapa la mitad de abajo de la cancha pero nunca la ficha
+   del jugador que se acaba de tocar, y deja el marcador entero a la vista. */
 
 .capa-modal {
   position: fixed;
   inset: 0;
-  /* Velo suave a propósito: con 78% el marcador quedaba en 1,7:1 de contraste, ilegible.
-     30% mantiene la separación sin arruinar lo que hay detrás. */
-  background: rgb(0 0 0 / 30%);
-  display: flex;
-  align-items: stretch;
-  justify-content: center;
   z-index: 10;
-  padding: max(12px, env(safe-area-inset-top)) 12px max(12px, env(safe-area-inset-bottom));
 }
 
-.capa-modal[hidden] {
-  display: none;
+/* El velo arranca ABAJO del marcador: éste nunca se atenúa, ni un poquito. Es un
+   degradado que sólo empieza a tapar pasada la franja del marcador. */
+.velo {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    180deg,
+    transparent 0,
+    transparent 22%,
+    rgb(2 6 10 / 34%) 26%,
+    rgb(2 6 10 / 72%) 32%
+  );
+  z-index: 8;
 }
 
-.modal {
-  align-self: flex-end;
-  width: 100%;
-  max-width: 560px;
+.hoja {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 9;
+  display: flex;
+  flex-direction: column;
+  padding: 8px 12px calc(14px + env(safe-area-inset-bottom, 0px));
+  border-radius: var(--r-lg) var(--r-lg) 0 0;
+  background: linear-gradient(180deg, #1b2835, var(--n-2));
+  border-top: 1px solid rgb(255 255 255 / 12%);
+  box-shadow: var(--s-hoja);
   max-height: 100%;
-  overflow-y: auto;
-  background: var(--fondo-2);
-  border: 1px solid var(--linea);
-  border-radius: 18px;
-  padding: 14px;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
 }
 
-.modal__titulo {
-  margin: 0;
-  font-size: 1em;
-  color: var(--texto-2);
-  display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  gap: 10px;
+.hoja__agarre {
+  width: 38px;
+  height: 4px;
+  border-radius: var(--r-full);
+  background: var(--n-4);
+  margin: 0 auto 10px;
+  flex: none;
 }
 
-.modal__movimientos {
+.hoja__titulo {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-bottom: 10px;
+  flex: none;
+  min-width: 0;
+}
+
+.hoja__jugador {
+  font: 800 var(--f-18) / 1.1 var(--sans);
+  letter-spacing: -0.01em;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hoja__jugador em {
+  font-style: normal;
+  color: var(--t-3);
+  font-weight: 700;
+}
+
+.hoja__resultado {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 28px;
+  padding: 0 11px;
+  border-radius: var(--r-full);
+  font: 800 var(--f-11) / 1 var(--sans);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  flex: none;
+}
+
+.hoja__resultado--verde {
+  background: var(--verde);
+  color: var(--verde-tinta);
+}
+
+.hoja__resultado--rojo {
+  background: var(--rojo);
+  color: var(--rojo-tinta);
+}
+
+/* Los 7 movimientos + "Sin especificar" + "Descartar" = 9 celdas: 3×3 exactas, en el
+   orden fijo de movimientos.js, sin huérfanos. */
+.movs {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 8px;
+  flex: none;
 }
 
-.modal__movimientos button {
-  min-height: clamp(54px, 11vh, 72px);
-  font-size: 1em;
-  font-weight: 600;
-}
-
-.modal__descartar {
-  width: 100%;
-  background: transparent;
-  color: var(--texto-2);
-  min-height: 46px;
-}
-
-/* ---------------------------------------------------------------- fin */
-
-.fin {
+.mov {
+  min-width: 0;
+  min-height: 54px;
   display: flex;
-  flex-direction: column;
-  gap: 10px;
-  height: 100%;
-  min-height: 0;
-}
-
-.fin h2 {
-  margin: 0;
-  font-size: 1.1em;
-  flex: 0 0 auto;
-}
-
-/* Lugar donde se muda el marcador en la pantalla de fin. `block` y no `flex`: como fila,
-   el marcador se encogía al ancho de su contenido. */
-.fin__marcador {
-  display: block;
-  flex: 0 0 auto;
-}
-
-.resumen {
-  flex: 1 1 auto;
-  min-height: 80px;
-  overflow-y: auto;
-  background: var(--fondo);
+  align-items: center;
+  justify-content: center;
+  padding: 0 6px;
   border: 1px solid var(--linea);
-  border-radius: var(--radio);
-  padding: 12px;
+  border-radius: var(--r-sm);
+  background: linear-gradient(180deg, #22313f, #18242f);
+  color: var(--t-1);
+  font: 700 var(--f-15) / 1.1 var(--sans);
+  text-align: center;
+  box-shadow: var(--s-inside);
+}
+
+.mov--pelota {
+  border-color: rgb(255 211 77 / 42%);
+  background: linear-gradient(180deg, #2c2b1d, #23241a);
+  color: var(--pelota);
+}
+
+.mov--soltar {
+  border-color: rgb(255 255 255 / 10%);
+  background: transparent;
+  box-shadow: none;
+  color: var(--t-2);
+  gap: 7px;
+}
+
+/* El resumen en la hoja de copia manual: a la vista y seleccionable, porque en contexto
+   no seguro (por la IP de la LAN) no hay portapapeles y copiar a mano es la única vía. */
+.hoja__texto {
+  flex: 1 1 auto;
+  min-height: 120px;
+  max-height: 46dvh;
+  margin: 0 0 10px;
+  overflow: auto;
+  border: 1px solid var(--linea);
+  border-left: 3px solid var(--pelota);
+  border-radius: var(--r-sm);
+  background: var(--n-1);
+  color: #d3e4f2;
+  padding: 10px 12px;
   white-space: pre-wrap;
-  font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
-  font-size: 0.85em;
-  line-height: 1.45;
+  overflow-wrap: break-word;
+  font-family: var(--mono);
+  font-size: 14px;
+  line-height: 1.55;
   user-select: text;
+  -webkit-user-select: text;
 }
 
-/* ---------------------------------------------------------------- horizontal */
-
-/* Horizontal: 2 jugadores por lado con la red en el medio (RF-39).
-   Todo el estado vive en app.js, así que rotar no pierde nada (RF-41). */
-@media (orientation: landscape) {
-  :root {
-    --alto-boton: clamp(44px, 11vh, 62px);
-  }
-
-  /* En horizontal la pantalla es baja: el marcador se compacta para que los 4 jugadores
-     Keeppan alto tocable en vez de que el marcador se coma la cancha. */
-  .marcador {
-    gap: 4px;
-    padding: 6px 10px;
-  }
-
-  .marcador__equipo {
-    font-size: 0.72em;
-  }
-
-  .marcador__cuenta b {
-    font-size: 1.25em;
-  }
-
-  .punto {
-    min-height: 44px;
-    font-size: 1.25em;
-  }
-
-  .puntos__vs {
-    font-size: 0.6em;
-  }
-
-  .parcial button {
-    min-height: 44px;
-    min-width: 40px;
-    padding: 0 4px;
-  }
-
-  .acciones {
-    margin-top: 6px;
-  }
-
-  .acciones button {
-    min-height: 44px;
-  }
-
-  .cancha {
-    grid-template-columns: minmax(0, 1fr) 1px minmax(0, 1fr);
-    grid-template-rows: 1fr 1fr;
-  }
-
-  /* La red: una línea en el medio del rectángulo. */
-  .cancha::after {
-    content: '';
-    grid-column: 2;
-    grid-row: 1 / -1;
-    background: var(--linea);
-  }
-
-  /* Cada jugador va a su esquina. Sin esto, los dos de arriba caen en la misma celda y
-     solo se ve uno: el puesto decide la esquina, no el lado de la cancha.
-     1 arriba-izq · 2 arriba-der · 3 abajo-izq · 4 abajo-der. */
-  .jugador:nth-child(1) {
-    grid-area: 1 / 1;
-  }
-
-  .jugador:nth-child(2) {
-    grid-area: 1 / 3;
-  }
-
-  .jugador:nth-child(3) {
-    grid-area: 2 / 1;
-  }
-
-  .jugador:nth-child(4) {
-    grid-area: 2 / 3;
-  }
-
-  .jugador {
-    justify-content: center;
-  }
-
-  /* En horizontal la celda es más angosta: el nombre se aparta un poco menos. */
-  .jugador--seleccionado .jugador__nombre {
-    padding: 0 calc(var(--tam-resultado) - 4px);
-  }
-
-  .modal__movimientos {
-    grid-template-columns: repeat(4, 1fr);
-  }
-}
-
-/* Pantallas muy bajas en vertical: achica el marcador antes que la cancha. */
-@media (max-height: 620px) and (orientation: portrait) {
-  .marcador__cuenta b {
-    font-size: 1.2em;
-  }
-
-  .punto {
-    font-size: 1.2em;
-    min-height: 40px;
-  }
-}
-/* ---------------------------------------------------------------- avisos flotantes */
+/* ============================================================ AVISOS FLOTANTES */
 
 .avisos {
   position: fixed;
@@ -765,10 +1558,10 @@ input::placeholder {
 
 .aviso {
   padding: 14px 16px;
-  border-radius: var(--radio);
+  border-radius: var(--r-sm);
   background: var(--verde);
-  color: #04240f;
-  font-weight: 700;
+  color: var(--verde-tinta);
+  font: 800 var(--f-15) / 1.3 var(--sans);
   text-align: center;
   box-shadow: 0 6px 20px rgb(0 0 0 / 45%);
 }
@@ -778,19 +1571,671 @@ input::placeholder {
   color: #fff;
 }
 
-/* El resumen del modal de copia: tiene que poder seleccionarse a mano (RF-81). */
-.resumen-modal {
-  flex: 1 1 auto;
-  min-height: 120px;
-  overflow-y: auto;
-  background: var(--fondo);
+/* ================================================================== FIN
+
+   Un solo DOM, dos grids distintos. Los envoltorios `fin__izq` y `fin__der` son
+   `display: contents`: no existen como cajas, sólo ordenan el flujo. */
+
+.fin {
+  display: grid;
+  gap: 9px;
+  height: 100%;
+  min-height: 0;
+}
+
+.fin__interior {
+  display: contents;
+}
+
+.fin__titulo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  grid-area: titulo;
+  padding: 2px 5px 0 2px;
+}
+
+.fin__titulo h2 {
+  margin: 0;
+  font: 800 var(--f-22) / 1 var(--sans);
+  letter-spacing: -0.02em;
+}
+
+.fin__trofeo {
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  border-radius: 11px;
+  background: rgb(255 211 77 / 15%);
+  border: 1px solid rgb(255 211 77 / 32%);
+  color: var(--pelota);
+  flex: none;
+}
+
+/* Por QUÉ terminó. El nombre del ganador no va acá a propósito: el motor no exporta
+   quién ganó el partido y la UI no puede comparar los sets para deducirlo
+   (constitución 2). El resultado se lee de las cajas de sets, con el color de cada
+   pareja. */
+.fin__motivo {
+  margin-left: auto;
+  color: var(--t-3);
+  font: 700 var(--f-11) / 1.15 var(--sans);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  text-align: right;
+}
+
+.fin__izq,
+.fin__der {
+  display: contents;
+}
+
+/* Vertical: título, marcador, resumen (el que crece) y acciones abajo del todo, en la
+   zona del pulgar. */
+.fin {
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: auto auto minmax(0, 1fr) auto;
+  grid-template-areas:
+    'titulo'
+    'marcador'
+    'resumen'
+    'acciones';
+}
+
+/* En la pantalla de fin el marcador muestra sólo el resultado: el punto del juego y el
+   saque ya no dicen nada. Se ocultan acá, y las cajas de sets suben al tamaño del
+   resultado final. */
+/* `grid-area` explícita: sin ella el marcador se auto-coloca en una fila nueva y deja la
+   fila que le corresponde vacía. */
+.fin__marcador {
+  grid-area: marcador;
+  min-width: 0;
+}
+
+.fin__marcador .marcador__puntos,
+.fin__marcador .editor--puntos,
+.fin__marcador .marcador__pie {
+  display: none;
+}
+
+.fin__marcador .marcador {
+  grid-template-areas:
+    'eqA eqB'
+    'parciales sets';
+  gap: 9px 10px;
+}
+
+.fin__marcador .marcador__parciales {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 7px;
+}
+
+.fin__marcador .marcador__parciales > .micro {
+  text-align: center;
+}
+
+.fin__marcador .sets {
+  margin-left: 0;
+  padding-left: 0;
+  justify-content: center;
+  gap: 6px;
+}
+
+.fin__marcador .sets__caja {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  font-size: var(--f-18);
+}
+
+.fin__marcador .sets__txt {
+  font-size: var(--f-13);
+}
+
+.fin__marcador .parciales {
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.acciones--fin {
+  grid-area: acciones;
+}
+
+/* El resumen: monoespaciado, con filete de amarillo de pelota. Es texto para copiar y
+   pegar, y tiene que verse como eso. */
+.resumen-caja {
+  grid-area: resumen;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  border-radius: var(--r-sm);
   border: 1px solid var(--linea);
-  border-radius: var(--radio);
-  padding: 12px;
+  border-left: 3px solid var(--pelota);
+  background: var(--n-1);
+  overflow: hidden;
+}
+
+.resumen-caja__cab {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 7px 10px 6px 11px;
+  border-bottom: 1px solid var(--linea);
+  background: rgb(255 255 255 / 2%);
+}
+
+.resumen {
+  flex: 1 1 auto;
+  min-height: 0;
+  margin: 0;
+  padding: 10px 12px 11px;
+  overflow: auto;
+  color: #d3e4f2;
+  font-family: var(--mono);
+  font-size: 14.5px;
+  line-height: 1.62;
   white-space: pre-wrap;
-  font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
-  font-size: 0.85em;
-  line-height: 1.45;
+  overflow-wrap: break-word;
+  -webkit-overflow-scrolling: touch;
   user-select: text;
   -webkit-user-select: text;
+}
+
+/* El resumen se ajusta a su texto (si un partido de 5 sets no entra, scrollea él solo);
+   las acciones se van al fondo, a la zona del pulgar. */
+.fin .resumen-caja {
+  flex: 0 1 auto;
+}
+
+.fin .acciones {
+  margin-top: auto;
+}
+
+/* ============================================================================
+   HORIZONTAL — otro layout, no el vertical encogido.
+
+   El marcador es un riel de 70px con los parciales en el medio y el punto del juego a
+   la derecha de ellos. Los nombres de pareja van en los extremos. El saque y los avisos
+   no entran acá: viven en el piso de la cancha, que en horizontal sobra a los lados.
+   ========================================================================== */
+
+@media (orientation: landscape) {
+  .pantalla {
+    padding: 5px 8px calc(7px + env(safe-area-inset-bottom, 0px));
+    gap: 0;
+  }
+
+  /* --- el riel */
+
+  .marcador {
+    grid-template-columns: minmax(0, auto) minmax(0, 1fr) auto auto minmax(0, auto);
+    grid-template-areas: 'eqA parciales puntos sets eqB';
+    align-items: center;
+    gap: 0 10px;
+    height: 70px;
+    padding: 0 12px;
+  }
+
+  .eq {
+    max-width: 118px;
+  }
+
+  .marcador__parciales {
+    justify-content: flex-start;
+  }
+
+  .parciales {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .parciales::-webkit-scrollbar {
+    display: none;
+  }
+
+  .parcial {
+    height: 46px;
+    flex: none;
+  }
+
+  .parcial button {
+    min-height: 44px;
+    min-width: 40px;
+    font-size: var(--f-13);
+  }
+
+  .parcial__guion {
+    font-size: var(--f-13);
+  }
+
+  .sets {
+    margin-left: 0;
+    padding-left: 0;
+    gap: 3px;
+  }
+
+  .sets__caja {
+    width: 24px;
+    height: 24px;
+    border-radius: 7px;
+    font-size: var(--f-13);
+  }
+
+  .sets__txt {
+    font-size: 10px;
+  }
+
+  .punto__medio {
+    display: none;
+  }
+
+  .marcador__puntos {
+    gap: 8px;
+  }
+
+  .punto {
+    height: 54px;
+    max-width: none;
+    min-width: 82px;
+    font-size: 36px;
+    border-radius: var(--r-chip);
+  }
+
+  .punto--etiqueta {
+    font-size: var(--f-22);
+  }
+
+  /* El editor ocupa la columna del medio del riel, la misma de los parciales, y no una
+     fila nueva: el riel está fijo en 70px, así que una fila extra quedaba recortada por
+     `overflow: hidden` y no se veía nada. Los parciales se ocultan mientras se edita y el
+     rótulo del editor dice qué se está tocando. */
+  .editor {
+    grid-area: parciales;
+    grid-column: auto;
+    align-self: center;
+    height: 58px;
+    padding: 6px 7px;
+    gap: 6px;
+  }
+
+  .marcador--editando .marcador__parciales {
+    display: none;
+  }
+
+  .editor__rotulo {
+    flex-direction: row;
+    align-items: baseline;
+    gap: 5px;
+  }
+
+  .editor__valor {
+    font-size: var(--f-13);
+    max-width: 70px;
+  }
+
+  .opcion {
+    height: 44px;
+    font-size: var(--f-15);
+  }
+
+  .editor__cerrar {
+    height: 44px;
+  }
+
+  /* El aviso de "punto activo" no cabe en un riel de 70px: el dato editado ya se
+     distingue por el editor abierto. */
+  .punto--activo {
+    outline-offset: -1px;
+  }
+
+  /* --- el saque y los avisos, al piso */
+
+  .marcador__pie {
+    display: none;
+  }
+
+  .piso-info {
+    display: flex;
+    flex-direction: column;
+    left: 16px;
+    top: 12px;
+    right: 16px;
+    gap: 6px;
+  }
+
+  /* --- la cancha: 2:1 real, centrada, con la red vertical */
+
+  .cancha__tabla {
+    inset: 0 20%;
+  }
+
+  .cancha__tabla::before {
+    background:
+      radial-gradient(15% 22% at 17% 25%, rgb(59 199 232 / 26%), transparent 72%),
+      radial-gradient(15% 22% at 17% 75%, rgb(59 199 232 / 26%), transparent 72%),
+      radial-gradient(15% 22% at 83% 25%, rgb(255 138 60 / 24%), transparent 72%),
+      radial-gradient(15% 22% at 83% 75%, rgb(255 138 60 / 24%), transparent 72%);
+  }
+
+  .cancha__lineas::before,
+  .cancha__lineas::after {
+    left: auto;
+    right: auto;
+    top: 7px;
+    bottom: 7px;
+    width: 2px;
+    height: auto;
+  }
+
+  .cancha__lineas::before {
+    right: 34.4%;
+  }
+
+  .cancha__lineas::after {
+    left: 34.4%;
+  }
+
+  .cancha__eje {
+    left: 34.4%;
+    top: 50%;
+    width: 31.2%;
+    height: 2px;
+    transform: translateY(-1px);
+  }
+
+  .red {
+    left: 50%;
+    right: auto;
+    top: 8px;
+    bottom: 8px;
+    width: 14px;
+    transform: translateX(-50%);
+    flex-direction: row;
+  }
+
+  .red::before,
+  .red::after {
+    top: auto;
+    left: 0;
+    width: 34px;
+    height: 4px;
+    background: linear-gradient(90deg, rgb(255 255 255 / 78%), rgb(255 255 255 / 16%));
+  }
+
+  .red::before {
+    top: 0;
+  }
+
+  .red::after {
+    bottom: 0;
+    background: linear-gradient(90deg, rgb(255 255 255 / 16%), rgb(255 255 255 / 78%));
+  }
+
+  .red__cinta {
+    width: 3px;
+    height: auto;
+  }
+
+  .red__malla {
+    width: 14px;
+    height: auto;
+    background:
+      repeating-linear-gradient(180deg, rgb(255 255 255 / 40%) 0 1px, transparent 1px 4px),
+      linear-gradient(90deg, rgb(4 14 26 / 62%), rgb(4 14 26 / 88%));
+  }
+
+  /* --- las fichas: dos jugadores de cada lado de la red, en columna */
+
+  /* La ficha es una columna también cuando está elegida: en fila, el encabezado
+     (monograma + nombre) y los dos botones de 56px no entran en 148px y el rojo se va de
+     la ficha. Apilados entran: 34 + 6 + 44 = 84px de los 106 que tiene la fila. */
+  /* Sin prefijo de clase: la orientación la decide este mismo media query. Con un
+     `.horizontal` adelante la regla no matcheaba nunca y la ficha quedaba en fila. */
+  .ficha {
+    flex-direction: column;
+  }
+
+  .fichas__par {
+    top: 9px;
+    bottom: 9px;
+    width: 148px;
+    grid-template-columns: minmax(0, 100%);
+    grid-template-rows: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 14px;
+  }
+
+  .fichas__par--arriba {
+    left: 11px;
+    right: auto;
+    height: auto;
+  }
+
+  .fichas__par--abajo {
+    right: 11px;
+    left: auto;
+    height: auto;
+  }
+
+  .ficha__mono {
+    width: 58px;
+    height: 58px;
+    border-radius: 18px;
+    font-size: var(--f-22);
+  }
+
+  .ficha__nombre {
+    font-size: var(--f-13);
+  }
+
+  /* Elegida en horizontal: encabezado arriba, los dos botones al lado con sólo el glifo. */
+  .ficha--elegida {
+    justify-content: flex-start;
+    gap: 6px;
+    padding: 8px;
+  }
+
+  .ficha--elegida .ficha__hit {
+    flex: none;
+    gap: 7px;
+  }
+
+  .ficha--elegida .ficha__mono {
+    width: 34px;
+    height: 34px;
+    border-radius: 11px;
+    font-size: var(--f-13);
+  }
+
+  .ficha--elegida .ficha__nombre {
+    font-size: var(--f-11);
+    line-height: 1.15;
+  }
+
+  .ficha--elegida .ficha__acciones {
+    flex-direction: row;
+    flex: 1 1 auto;
+    width: auto;
+    min-width: 0;
+  }
+
+  .ficha--elegida .resultado {
+    font-size: var(--f-22);
+    padding: 0 4px;
+  }
+
+  .ficha--elegida .resultado span:not(.resultado__glifo) {
+    display: none;
+  }
+
+  /* --- la barra de acciones sigue siendo una fila */
+
+  .acciones:not(.acciones--fin) {
+    flex-direction: row;
+    gap: 8px;
+  }
+
+  .acciones:not(.acciones--fin) .btn {
+    min-height: 46px;
+  }
+
+  /* --- la creación en horizontal: tres columnas, para que entre entera
+
+     Con dos columnas (parejas apiladas a la izquierda, opciones a la derecha) el contenido
+     mide 483px contra los 378px de la pantalla: "Empezar" caía fuera de la vista y había
+     que scrollear para empezar el partido. Con las dos parejas de pareja y las opciones en
+     una sola fila de tres columnas, la fila más alta son las opciones (250px) y todo entra:
+     30 + 250 + 76 + 16 = 372px. */
+
+  .creacion__campos {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1.2fr);
+    grid-template-areas:
+      'titulo titulo titulo'
+      'parejaA parejaB opciones'
+      'pie    pie    pie';
+    align-content: start;
+    gap: 8px 10px;
+  }
+
+  .creacion__titulo {
+    grid-area: titulo;
+  }
+
+  .creacion__pareja--a {
+    grid-area: parejaA;
+  }
+
+  .creacion__pareja--b {
+    grid-area: parejaB;
+  }
+
+  .opciones {
+    grid-area: opciones;
+  }
+
+  .creacion__pie {
+    grid-area: pie;
+  }
+
+  /* Las parejas conservan su rejilla de dos columnas (nombre arriba, dos jugadores al
+     lado): a una sola columna la tarjeta queda con tres campos apilados y el doble de
+     alta, y la pantalla de creación entera no entra en 390px. */
+  .creacion__pareja {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+
+  /* Los botones de opción bajan un escalón (de 52/56 a 48/50) para que la pantalla entre
+     entera en 390px de alto. 48 y 50 quedan muy por encima del piso táctil de 44. */
+  .opciones {
+    gap: 7px;
+    padding: 9px;
+  }
+
+  .opcion-set {
+    min-height: 48px;
+  }
+
+  .saca-btn {
+    min-height: 50px;
+  }
+
+  /* El último pixel: con 10 de padding abajo la creación mide 379 contra los 378 de la
+     pantalla y aparecía una barra de scroll de un pixel. */
+  .creacion {
+    padding-bottom: 8px;
+  }
+
+  /* --- el fin en horizontal: dos columnas de verdad, el resumen entero a la derecha */
+
+  .fin {
+    grid-template-columns: 208px minmax(0, 1fr);
+    grid-template-rows: auto auto minmax(0, 1fr);
+    grid-template-areas:
+      'titulo   titulo'
+      'marcador marcador'
+      'acciones resumen';
+    gap: 8px 12px;
+  }
+
+  /* El resumen llena su columna y scrollea sólo si de verdad no entra. Con 12px/1.4 y sin
+     padding de sobra, las 13 líneas de un partido de 3 sets (4 de ellas vacías) entran
+     enteras: 13 × 16.8 = 218px contra los 242px de la caja. */
+  .fin .resumen-caja {
+    flex: 1 1 auto;
+  }
+
+  .resumen {
+    font-size: 12px;
+    line-height: 1.4;
+    padding: 7px 10px 8px;
+  }
+
+  /* El trofeo del encabezado del fin baja un escalón: acá cada píxel de la columna del
+     resumen es un píxel de texto que entra. */
+  .fin__trofeo {
+    width: 28px;
+    height: 28px;
+    border-radius: 9px;
+  }
+
+  .fin__titulo {
+    padding: 0 5px 0 2px;
+  }
+
+  .acciones--fin {
+    gap: 6px;
+  }
+
+  .acciones--fin .acciones__par {
+    display: contents;
+  }
+
+  .acciones--fin .btn {
+    min-height: 46px;
+  }
+
+  /* En horizontal el marcador del fin es una tira de dos filas: los dos nombres de pareja
+     arriba con las cajas de sets en el medio, y los parciales abajo.
+     (Las cajas de sets viven dentro de `.marcador__parciales`, así que no hay un área
+     'sets' propia: el grid del marcador sólo tiene 'eqA', 'eqB' y 'parciales'.) */
+  /* El marcador del fin también es un riel: los parciales en el medio y la cuenta de sets a
+     la derecha de ellos. Una sola fila de 64px — 6 menos que el riel del partido — para que
+     el resumen de abajo entre entero sin scrollear. */
+  .fin__marcador .marcador {
+    grid-template-columns: minmax(0, auto) minmax(0, 1fr) auto minmax(0, auto);
+    grid-template-areas: 'eqA parciales sets eqB';
+    align-items: center;
+    height: 64px;
+    padding: 0 12px;
+    gap: 0 12px;
+  }
+
+  .fin__marcador .marcador__parciales > .micro {
+    display: none;
+  }
+
+  .fin__marcador .marcador__parciales {
+    justify-content: center;
+  }
+
+  .fin__marcador .eq {
+    max-width: 150px;
+  }
+
+  .fin__marcador .parcial {
+    height: 46px;
+    flex: none;
+  }
+
+  .fin__marcador .parcial button {
+    min-height: 44px;
+    min-width: 38px;
+    font-size: var(--f-13);
+  }
 }

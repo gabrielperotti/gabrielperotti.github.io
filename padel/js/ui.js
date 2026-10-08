@@ -172,15 +172,16 @@ export function tituloDelPuntoPendiente(jugador, resultado) {
 
 // ================================================================= DOM
 
-// Crea un elemento. Props especiales: `clase`, `texto`, `datos` (dataset) y cualquier `on*`,
-// que se engancha con addEventListener (nunca con setAttribute: ahí una función se convierte
-// en texto y no ejecuta).
+// Crea un elemento. Props especiales: `clase`, `texto`, `datos` (dataset), `svg` (HTML crudo de
+// un icono) y cualquier `on*`, que se engancha con addEventListener (nunca con setAttribute:
+// ahí una función se convierte en texto y no ejecuta).
 function el(etiqueta, props = {}, hijos = []) {
   const nodo = document.createElement(etiqueta);
 
   for (const [clave, valor] of Object.entries(props)) {
     if (clave === 'clase') nodo.className = valor;
     else if (clave === 'texto') nodo.textContent = valor;
+    else if (clave === 'svg') nodo.innerHTML = valor;
     else if (clave === 'datos') Object.assign(nodo.dataset, valor);
     else if (clave.startsWith('on') && typeof valor === 'function') {
       nodo.addEventListener(clave.slice(2), valor);
@@ -191,6 +192,32 @@ function el(etiqueta, props = {}, hijos = []) {
   for (const hijo of Array.isArray(hijos) ? hijos : [hijos]) if (hijo) nodo.append(hijo);
   return nodo;
 }
+
+// ---------------------------------------------------------------- iconos
+
+// SVG inline, sin CDN ni fuentes. Trazo de 2 y `currentcolor`: el icono toma el color
+// del botón y no necesita variantes.
+const ICONO_COPIAR = '<rect x="9" y="3" width="11" height="17" rx="2.5"/><path d="M6 7H5a2 2 0 0 0-2 2v11a2 2 0 0 0 2 2h9a2 2 0 0 0 2-2v-1"/>';
+const ICONO_REINICIAR = '<path d="M3.5 12a8.5 8.5 0 1 0 2.6-6.1"/><path d="M3 4v5h5"/>';
+const ICONO_CERRAR = '<path d="m6 6 12 12M18 6 6 18"/>';
+const ICONO_MAS = '<path d="M12 4.5v15M4.5 12h15"/>';
+const ICONO_RAQUETA = '<path d="M7 4.8v14.4L19 12z"/>';
+const ICONO_TROFEO = '<path d="M7.5 4h9v5.2a4.5 4.5 0 0 1-9 0z"/><path d="M16.5 5.4H19v1.9a2.9 2.9 0 0 1-2.9 2.9M7.5 5.4H5v1.9a2.9 2.9 0 0 0 2.9 2.9"/><path d="M12 13.9V18M8.6 21h6.8l-.8-3H9.4z"/>';
+
+function icono(dibujo) {
+  return `<svg class="icono" viewBox="0 0 24 24" aria-hidden="true">${dibujo}</svg>`;
+}
+
+// Un botón de la barra de acciones: ícono + texto, nunca sólo ícono (se toca al tacto).
+function boton(texto, alTocar, { clase = '', dibujo = null } = {}) {
+  return el('button', {
+    clase: `btn ${clase}`.trim(),
+    type: 'button',
+    onclick: alTocar,
+  }, [dibujo === null ? null : el('span', { clase: 'btn__icono', svg: icono(dibujo) }), texto]);
+}
+
+// ---------------------------------------------------------------- estado del DOM
 
 let nodos = null;
 let jugadores = new Map();
@@ -236,16 +263,20 @@ export function montar(contenedor, capaModal) {
     puntos: {
       A: vistas.partido.querySelector('.punto--a'),
       B: vistas.partido.querySelector('.punto--b'),
-      vs: vistas.partido.querySelector('.puntos__vs'),
+      vs: vistas.partido.querySelector('.punto__medio'),
     },
     cuenta: {
       A: vistas.partido.querySelector('[data-juegos="A"]'),
       B: vistas.partido.querySelector('[data-juegos="B"]'),
-      equipoA: vistas.partido.querySelector('.marcador__equipo--a'),
-      equipoB: vistas.partido.querySelector('.marcador__equipo--b'),
+      equipoA: vistas.partido.querySelector('.eq__nombre--a'),
+      equipoB: vistas.partido.querySelector('.eq__nombre--b'),
     },
+    sacaA: vistas.partido.querySelector('.eq__saca--a'),
+    sacaB: vistas.partido.querySelector('.eq__saca--b'),
     pie: vistas.partido.querySelector('.marcador__pie'),
+    piePiso: vistas.partido.querySelector('.piso-info'),
     resumen: vistas.fin.querySelector('.resumen'),
+    motivoFin: vistas.fin.querySelector('.fin__motivo'),
     marcadorFin: vistas.fin.querySelector('.fin__marcador'),
     avisos: document.getElementById('avisos'),
   };
@@ -257,86 +288,223 @@ function construirCreacion() {
   const contenedor = el('div', { clase: 'creacion__campos' });
 
   contenedor.append(
-    el('h1', { texto: 'Nuevo partido' }),
+    el('div', { clase: 'creacion__titulo' }, [
+      el('h1', { texto: 'Nuevo partido' }),
+      el('span', { clase: 'micro micro--fila', texto: 'Sin cuentas · sin internet' }),
+    ]),
     grupoPareja('A', 'Pareja A'),
     grupoPareja('B', 'Pareja B'),
-    el('div', { clase: 'creacion__opciones' }, [
-      campoSelect('setsAElegir', 'Sets', [
-        { valor: '1', texto: '1 set' },
-        { valor: '3', texto: '3 sets' },
-        { valor: '5', texto: '5 sets' },
-      ], '3'),
-      campoSelect('modalidad', 'Modalidad', MODALIDADES.map((id) => ({
-        valor: id,
-        texto: ETIQUETAS_MODALIDAD[id] ?? id,
-      })), 'ventaja'),
-      campoSelect('parejaQueSacaElPrimero', 'Quién saca el primero', [
-        { valor: 'A', texto: 'Pareja A' },
-        { valor: 'B', texto: 'Pareja B' },
-      ], 'A'),
+    construirOpciones(),
+    el('div', { clase: 'creacion__pie' }, [
+      el('span', { clase: 'micro creacion__pista', texto: 'Los 4 nombres de jugador son obligatorios' }),
+      boton('Empezar', () => acciones.empezar(), {
+        clase: 'btn--pelota btn--alto boton-principal',
+        dibujo: ICONO_RAQUETA,
+      }),
     ]),
-    el('p', { clase: 'aviso-mini', texto: 'Los 4 nombres de jugador son obligatorios.' }),
-    el('button', {
-      clase: 'boton-principal',
-      type: 'button',
-      texto: 'Empezar',
-      onclick: () => acciones.empezar(),
-    }),
   );
 
   return contenedor;
 }
 
 function grupoPareja(letra, rotulo) {
-  const casillas = ['1', '2'].map((n) => el('input', {
-    type: 'text',
-    name: `jugador${letra}${n}`,
-    placeholder: `Jugador ${n} de la ${rotulo.toLowerCase()}`,
-    autocomplete: 'off',
-    required: true,
-  }));
-
-  return el('div', { clase: `creacion__pareja creacion__pareja--${letra.toLowerCase()}` }, [
-    el('p', { clase: 'creacion__rotulo', texto: rotulo }),
+  const campoNombre = el('label', { clase: 'campo campo--ancho' }, [
+    el('span', { texto: 'Nombre de la pareja · opcional' }),
     el('input', {
       type: 'text',
       name: `nombrePareja${letra}`,
-      placeholder: 'Nombre de la pareja (opcional)',
+      placeholder: 'Ej: Los Tigres',
       autocomplete: 'off',
     }),
+  ]);
+
+  const casillas = ['1', '2'].map((n) => el('label', { clase: 'campo' }, [
+    el('span', { texto: `Jugador ${n}` }),
+    el('input', {
+      type: 'text',
+      name: `jugador${letra}${n}`,
+      placeholder: `Jugador ${n}`,
+      autocomplete: 'off',
+      required: true,
+    }),
+  ]));
+
+  return el('div', { clase: `creacion__pareja creacion__pareja--${letra.toLowerCase()}` }, [
+    el('span', { clase: 'creacion__rotulo' }, [
+      el('i', { clase: 'creacion__punto' }),
+      rotulo,
+    ]),
+    campoNombre,
     ...casillas,
   ]);
 }
 
-function campoSelect(name, rotulo, opciones, porDefecto) {
-  const select = el('select', { name });
-  for (const opcion of opciones) {
-    select.append(el('option', { value: opcion.valor, texto: opcion.texto, selected: opcion.valor === porDefecto }));
+// Los grupos de opciones son botones, no <select>: se tocan, no se abren. El valor elegido
+// vive en un <input hidden> con el mismo `name`, así que `leerFormulario` sigue leyendo
+// `form.elements[name].value` y no hay que tocar esa lógica.
+function construirOpciones() {
+  return el('div', { clase: 'opciones' }, [
+    bloqueOpciones('setsAElegir', 'Sets', 'a cuántos sets se gana', [
+      { valor: '1', texto: '1 set', nota: 'partido único' },
+      { valor: '3', texto: '3 sets', nota: 'al mejor de 3' },
+      { valor: '5', texto: '5 sets', nota: 'al mejor de 5' },
+    ], '3', 3, 'opcion-set'),
+
+    bloqueOpciones('modalidad', 'Modalidad', 'qué pasa en el deuce', [
+      { valor: 'ventaja', texto: 'Ventaja', nota: 'deuce + ventaja' },
+      { valor: 'punto_oro', texto: 'Punto de oro', nota: 'oro en el deuce' },
+      { valor: 'star_point', texto: 'Star point', nota: 'punto único' },
+    ], 'ventaja', 3, 'opcion-set'),
+
+    bloqueSaque(),
+  ]);
+}
+
+// Un <label> con el rótulo y la pista, más el input hidden que lleva el valor.
+function bloqueOpciones(name, rotulo, pista, opciones, porDefecto, columnas, claseBoton) {
+  const oculto = el('input', { type: 'hidden', name, value: porDefecto });
+
+  const botones = opciones.map((opcion) => el('button', {
+    clase: claseBoton,
+    type: 'button',
+    datos: { valor: opcion.valor, name },
+    onclick: () => elegirOpcion(name, opcion.valor, claseBoton),
+  }, [
+    el('span', { texto: opcion.texto }),
+    el('span', { clase: 'opcion-set__nota', texto: opcion.nota }),
+  ]));
+
+  // El default viene elegido de arranque.
+  marcarElegido(botones, porDefecto, claseBoton);
+
+  return el('div', { clase: 'opciones__bloque' }, [
+    el('div', { clase: 'opciones__rotulo' }, [
+      el('span', { texto: rotulo }),
+      el('span', { clase: 'opciones__pista', texto: pista }),
+    ]),
+    oculto,
+    el('div', { clase: `segmento segmento--${columnas}` }, botones),
+  ]);
+}
+
+function bloqueSaque() {
+  const oculto = el('input', { type: 'hidden', name: 'parejaQueSacaElPrimero', value: 'A' });
+
+  const botones = ['A', 'B'].map((letra) => el('button', {
+    clase: `saca-btn saca-btn--${letra.toLowerCase()}${letra === 'A' ? ' saca-btn--elegida' : ''}`,
+    type: 'button',
+    datos: { valor: letra, name: 'parejaQueSacaElPrimero' },
+    onclick: () => elegirSaque(letra),
+  }, [
+    el('i', { clase: 'saca-btn__punto' }),
+    el('span', { texto: `Pareja ${letra}` }),
+    // Eligen la pareja por los nombres que ya están escritos arriba: si no hay nombre de
+    // pareja, se muestran los jugadores, que es lo que el jugador de la cancha va a leer.
+    el('span', { clase: 'saca-btn__nota', texto: '' }),
+  ]));
+
+  return el('div', { clase: 'opciones__bloque' }, [
+    el('div', { clase: 'opciones__rotulo' }, [
+      el('span', { texto: 'Quién saca el primero' }),
+      el('span', { clase: 'opciones__pista', texto: 'después lo deduce solo' }),
+    ]),
+    oculto,
+    el('div', { clase: 'segmento segmento--2' }, botones),
+  ]);
+}
+
+// Cambia el valor del grupo y repinta cuál de los botones está elegido. El valor va en un
+// `<input hidden>` con el `name` del campo, así que `leerFormulario` sigue leyendo lo mismo
+// que leía del `<select>`: no cambia ninguna lógica.
+function elegirOpcion(name, valor, claseBoton) {
+  const oculto = document.querySelector(`input[type="hidden"][name="${name}"]`);
+  if (oculto === null) return;
+  oculto.value = valor;
+  marcarElegido(document.querySelectorAll(`[data-name="${name}"]`), valor, claseBoton);
+}
+
+function marcarElegido(botones, valor, claseBoton) {
+  for (const botonDeOpciones of botones) {
+    botonDeOpciones.classList.toggle(`${claseBoton}--elegida`, botonDeOpciones.dataset.valor === valor);
   }
-  return el('label', { clase: 'campo' }, [el('span', { texto: rotulo }), select]);
+}
+
+function elegirSaque(letra) {
+  const oculto = document.querySelector('input[type="hidden"][name="parejaQueSacaElPrimero"]');
+  if (oculto === null) return;
+  oculto.value = letra;
+
+  for (const botonDeSaque of document.querySelectorAll('.saca-btn')) {
+    botonDeSaque.classList.toggle('saca-btn--elegida', botonDeSaque.dataset.valor === letra);
+  }
+  actualizarNombresDeSaque();
+}
+
+// Debajo de cada botón de saque se lee "quiénes son", y eso cambia con lo que se escribe
+// arriba. Es el mismo dato que va a ver en la cancha, así que se lee del formulario y no
+// de una copia: si no, se desincroniza.
+function actualizarNombresDeSaque() {
+  const formulario = document.querySelector('.creacion');
+  if (formulario === null) return;
+
+  const valor = (name) => (formulario.elements[name]?.value ?? '').trim();
+  for (const nota of document.querySelectorAll('.saca-btn__nota')) {
+    const botonDeSaque = nota.closest('.saca-btn');
+    nota.textContent = jugadoresDeSaque(valor, botonDeSaque.dataset.valor);
+  }
+}
+
+// Los dos jugadores de una pareja, separados por un punto medio. Si faltan, se dice: es
+// mejor un "sin nombre" que un botón que promete una cosa y muestra otra.
+function jugadoresDeSaque(valor, letra) {
+  const nombres = [valor(`jugador${letra}1`), valor(`jugador${letra}2`)].filter((n) => n !== '');
+  return nombres.length === 2 ? nombres.join(' · ') : 'sin nombre';
 }
 
 // ---------------------------------------------------------------- marcador
 
 function construirMarcador() {
   return el('header', { clase: 'marcador' }, [
-    el('div', { clase: 'marcador__sets' }, [
-      el('span', { clase: 'marcador__equipo marcador__equipo--a' }),
-      el('div', { clase: 'marcador__cuenta' }, [
-        el('b', { datos: { juegos: 'A' } }),
-        el('span', { texto: 'sets' }),
-        el('b', { datos: { juegos: 'B' } }),
-      ]),
-      el('span', { clase: 'marcador__equipo marcador__equipo--b' }),
+    // Fila 1: los dos nombres de pareja. La pelota marca de quién es el saque, y va pegada
+    // al nombre: el saque cambia de lado, no de fila.
+    el('span', { clase: 'eq eq--a' }, [
+      el('i', { clase: 'eq__saca eq__saca--a' }),
+      el('span', { clase: 'eq__nombre eq__nombre--a' }),
     ]),
-    el('div', { clase: 'parciales' }),
+    el('span', { clase: 'eq eq--b' }, [
+      el('span', { clase: 'eq__nombre eq__nombre--b' }),
+      el('i', { clase: 'eq__saca eq__saca--b' }),
+    ]),
+
+    // Fila 2: parciales y cuenta de sets, compitiendo entre ellos.
+    //
+    // `sets` es hijo DIRECTO del marcador, no de `.marcador__parciales`: en horizontal el
+    // marcador es un riel de 5 columnas y la cuenta de sets ocupa su propia. Anidada, su
+    // `grid-area` no pertenece al grid del marcador y el riel queda con una columna vacía.
+    el('div', { clase: 'marcador__parciales' }, [
+      el('span', { clase: 'micro', texto: 'Parciales' }),
+      el('div', { clase: 'parciales' }),
+    ]),
+    el('div', { clase: 'sets' }, [
+      el('b', { clase: 'sets__caja sets__caja--a', datos: { juegos: 'A' } }),
+      el('span', { classe: '', clase: 'sets__txt', texto: 'sets' }),
+      el('b', { clase: 'sets__caja sets__caja--b', datos: { juegos: 'B' } }),
+    ]),
+
     el('div', { clase: 'editor editor--parciales', hidden: true }),
-    el('div', { clase: 'puntos' }, [
+
+    // Fila 3: el punto del juego. Lo más grande del marcador, porque es lo único que
+    // cambia segundo a segundo.
+    el('div', { clase: 'marcador__puntos' }, [
       puntoDePareja('A'),
-      el('div', { clase: 'puntos__vs' }),
+      el('span', { clase: 'punto__medio' }),
       puntoDePareja('B'),
     ]),
+
     el('div', { clase: 'editor editor--puntos', hidden: true }),
+
+    // Fila 4: saque y avisos. En horizontal esta fila no entra en el marcador: el saque y
+    // los avisos bajan al piso de la cancha (`.piso-info`), que ahí sobra a los lados.
     el('div', { clase: 'marcador__pie' }),
   ]);
 }
@@ -353,72 +521,133 @@ function puntoDePareja(pareja) {
 // ---------------------------------------------------------------- cancha
 
 function construirCancha() {
-  const cancha = el('main', { clase: 'cancha' });
-  for (const puesto of [1, 2, 3, 4]) cancha.append(construirJugador(puesto));
-  return cancha;
+  // La cancha es un dibujo: fondo, líneas, eje y red. Las fichas de los jugadores se
+  // apoyan encima, como fichas sobre un dibujo, y van DENTRO de la tabla: en horizontal la
+  // tabla es un 2:1 centrado y las fichas tienen que apoyarse en sus bordes, dejando el
+  // piso oscuro de los costados libre para el saque y los avisos.
+  return el('main', { clase: 'cancha' }, [
+    el('div', { clase: 'cancha__tabla' }, [
+      el('div', { clase: 'cancha__borde' }),
+      el('div', { clase: 'cancha__lineas' }),
+      el('div', { clase: 'cancha__eje' }),
+      el('div', { clase: 'red' }, [el('div', { clase: 'red__cinta' }), el('div', { clase: 'red__malla' })]),
+      el('div', { clase: 'fichas' }, [
+        grupoFichas('arriba', 'A', 1),
+        grupoFichas('abajo', 'B', 3),
+      ]),
+    ]),
+    // El saque y los avisos, en el piso. Es el mismo texto que en vertical vive en el pie
+    // del marcador; la orientación muestra uno u otro.
+    el('div', { clase: 'piso-info' }),
+  ]);
 }
 
-// Un `<div>` con el nombre y los botones como hermanos. Meter botones dentro del botón del
-// jugador era HTML inválido (contenido interactivo anidado) y obligaba a.paddingar el nombre
-// para que el botón no quedara debajo: ese padding inflaba la columna del grid y empujaba la
-// cancha fuera de pantalla. Ahora los botones van en una capa aparte, sin tocar el nombre.
-function construirJugador(puesto) {
-  const letra = puesto <= 2 ? 'A' : 'B';
+function grupoFichas(lateral, letra, primerPuesto) {
+  return el('div', { clase: `fichas__par fichas__par--${lateral}` },
+    [0, 1].map((indice) => construirFicha(primerPuesto + indice, letra, lateral)));
+}
 
+function construirFicha(puesto, letra, lateral) {
+  // Un `<div>` con el nombre y los botones como hermanos. Meter botones dentro del botón del
+  // jugador sería HTML inválido (contenido interactivo anidado) y además obligaba a
+  // paddingar el nombre para que el botón no quedara debajo.
   const nombre = el('button', {
-    clase: 'jugador__nombre',
+    clase: 'ficha__hit',
     type: 'button',
     onclick: () => acciones.tocarJugador(puesto),
-  });
+  }, [
+    el('span', { clase: 'ficha__mono' }),
+    el('span', { clase: 'ficha__nombre' }),
+  ]);
 
-  const accionesDelJugador = el('div', { clase: 'jugador__acciones' }, [
+  const accionesDeFicha = el('div', { clase: 'ficha__acciones' }, [
     el('button', {
       clase: 'resultado resultado--verde',
       type: 'button',
-      texto: '✓',
       'aria-label': 'Punto a favor del jugador',
       onclick: () => acciones.elegirResultado(puesto, 'ganado'),
-    }),
+    }, [
+      el('span', { clase: 'resultado__glifo', texto: '✓' }),
+      el('span', { texto: 'Ganó' }),
+    ]),
     el('button', {
       clase: 'resultado resultado--rojo',
       type: 'button',
-      texto: '✗',
       'aria-label': 'Fallo del jugador: el punto es de la pareja rival',
       onclick: () => acciones.elegirResultado(puesto, 'fallado'),
-    }),
+    }, [
+      el('span', { clase: 'resultado__glifo', texto: '✗' }),
+      el('span', { texto: 'Falló' }),
+    ]),
   ]);
 
-  const celda = el('div', {
-    clase: `jugador jugador--${letra.toLowerCase()} jugador--${puesto <= 2 ? 'arriba' : 'abajo'}`,
+  const ficha = el('div', {
+    clase: `ficha ficha--${letra.toLowerCase()} ficha--${lateral}`,
     datos: { puesto: String(puesto) },
-  }, [nombre, accionesDelJugador]);
+  }, [nombre, accionesDeFicha]);
 
-  jugadores.set(puesto, { celda, nombre });
-  return celda;
+  jugadores.set(puesto, { ficha, nombre, mono: nombre.querySelector('.ficha__mono'), texto: nombre.querySelector('.ficha__nombre') });
+  return ficha;
 }
 
 function construirAccionesDePartido() {
   return el('nav', { clase: 'acciones' }, [
-    el('button', { type: 'button', texto: 'Copiar', onclick: () => acciones.copiarResumen() }),
-    el('button', { type: 'button', texto: 'Reiniciar', onclick: () => acciones.reiniciar() }),
-    el('button', { clase: 'peligro', type: 'button', texto: 'Cerrar', onclick: () => acciones.cerrar() }),
+    boton('Copiar', () => acciones.copiarResumen(), { dibujo: ICONO_COPIAR }),
+    boton('Reiniciar', () => acciones.reiniciar(), { dibujo: ICONO_REINICIAR }),
+    boton('Cerrar', () => acciones.cerrar(), { clase: 'btn--peligro', dibujo: ICONO_CERRAR }),
   ]);
 }
 
 function construirFin() {
-  return el('div', { clase: 'fin' }, [
-    el('h2', { texto: '¡Se terminó!' }),
-    // El marcador se muda acá con `mudarMarcadorA`: con el partido terminado por sets hay que
-    // poder editar un set para reabrirlo (CE-7, RF-52). Cerrado a mano no se edita, pero
-    // "Reiniciar" sigue estando: es la única vía para volver a empezar (RF-64).
-    el('div', { clase: 'fin__marcador' }),
-    el('pre', { clase: 'resumen', tabindex: '0' }),
-    el('nav', { clase: 'acciones' }, [
-      el('button', { type: 'button', texto: 'Copiar', onclick: () => acciones.copiarResumen() }),
-      el('button', { type: 'button', texto: 'Reiniciar', onclick: () => acciones.reiniciar() }),
-      el('button', { clase: 'peligro', type: 'button', texto: 'Empezar otro', onclick: () => acciones.empezarOtro() }),
+  return el('div', { clase: 'fin__interior' }, [
+    el('div', { clase: 'fin__titulo' }, [
+      el('span', { clase: 'fin__trofeo', svg: icono(ICONO_TROFEO) }),
+      el('h2', { texto: '¡Se terminó!' }),
+      // Por QUÉ terminó, no quién ganó: el motor no exporta el ganador del partido y la
+      // UI no puede comparando los sets para deducirlo (constitución 2). El resultado se
+      // lee de las cajas de sets, que ya vienen con el color de cada pareja.
+      el('span', { clase: 'fin__motivo' }),
+    ]),
+
+    el('div', { clase: 'fin__izq' }, [
+      // El marcador se muda acá con `mudarMarcadorA`: con el partido terminado por sets hay que
+      // poder editar un set para reabrirlo (CE-7, RF-52). Cerrado a mano no se edita, pero
+      // "Reiniciar" sigue estando: es la única vía para volver a empezar (RF-64).
+      el('div', { clase: 'fin__marcador' }),
+      el('nav', { clase: 'acciones acciones--fin' }, [
+        boton('Copiar resumen', () => acciones.copiarResumen(), { clase: 'btn--pelota', dibujo: ICONO_COPIAR }),
+        el('div', { clase: 'acciones__par' }, [
+          boton('Reiniciar', () => acciones.reiniciar(), { dibujo: ICONO_REINICIAR }),
+          boton('Empezar otro', () => acciones.empezarOtro(), { clase: 'btn--peligro', dibujo: ICONO_MAS }),
+        ]),
+      ]),
+    ]),
+
+    el('div', { clase: 'fin__der' }, [
+      el('div', { clase: 'resumen-caja' }, [
+        el('div', { clase: 'resumen-caja__cab' }, [
+          el('span', { clase: 'micro', texto: 'Para mandar por WhatsApp' }),
+          el('span', { clase: 'resumen-caja__n' }),
+        ]),
+        el('pre', { clase: 'resumen', tabindex: '0' }),
+      ]),
     ]),
   ]);
+}
+
+// Devuelve los grupos de opciones a su valor por defecto, incluido el botón que queda
+// marcado. Lo usa "Empezar otro": si sólo se vacía el input hidden, los botones siguen
+// mostrando la elección anterior y el formulario miente.
+export function reiniciarOpciones() {
+  const porDefecto = { setsAElegir: '3', modalidad: 'ventaja', parejaQueSacaElPrimero: 'A' };
+
+  for (const [name, valor] of Object.entries(porDefecto)) {
+    const oculto = document.querySelector(`input[type="hidden"][name="${name}"]`);
+    if (oculto !== null) oculto.value = valor;
+    marcarElegido(document.querySelectorAll(`[data-name="${name}"]`), valor, 'opcion-set');
+    marcarElegido(document.querySelectorAll(`[data-name="${name}"]`), valor, 'saca-btn');
+  }
+  actualizarNombresDeSaque();
 }
 
 // El marcador es un solo nodo: se muda de la vista de partido a la de fin en vez de duplicarlo,
@@ -439,6 +668,7 @@ export function render(estado) {
 
   if (vista === 'crear') {
     actualizarPantallaCreacion();
+    actualizarNombresDeSaque();
     return;
   }
 
@@ -462,6 +692,9 @@ function dibujarCuentas(partido) {
   nodos.cuenta.equipoB.textContent = nombreDePareja(partido, 'B');
   nodos.cuenta.A.textContent = String(A);
   nodos.cuenta.B.textContent = String(B);
+  // La pelota de saque va pegada al nombre de quien saca, en la fila 1 del marcador.
+  nodos.sacaA.hidden = partido.marcador.servidor !== 'A';
+  nodos.sacaB.hidden = partido.marcador.servidor !== 'B';
 }
 
 function dibujarParciales(estado) {
@@ -471,11 +704,12 @@ function dibujarParciales(estado) {
   const grupos = partido.marcador.sets.map((set, indice) => {
     const enCurso = indice === indiceSetEnCurso(partido.marcador);
     const visibles = juegosVisiblesDeSet(set);
-    const grupo = el('span', { clase: enCurso ? 'parcial parcial--en-curso' : 'parcial' });
+    const grupo = el('span', { clase: enCurso ? 'parcial parcial--curso' : 'parcial' });
 
     for (const pareja of ['A', 'B']) {
-      if (pareja === 'B') grupo.append(el('span', { clase: 'parcial__guion', texto: '-' }));
+      if (pareja === 'B') grupo.append(el('span', { clase: 'parcial__guion', texto: '–' }));
       grupo.append(el('button', {
+        clase: `parcial__${pareja.toLowerCase()}`,
         type: 'button',
         texto: visibles[pareja],
         disabled: !editable,
@@ -497,28 +731,38 @@ function dibujarPuntos(estado) {
   nodos.puntos.vs.textContent = enTieBreak(partido) ? 'TB' : 'punto';
 
   for (const pareja of ['A', 'B']) {
-    const boton = nodos.puntos[pareja];
+    const botonDePunto = nodos.puntos[pareja];
     const etiqueta = set === null ? '—' : etiquetaPunto(set, pareja);
-    boton.textContent = etiqueta;
-    boton.disabled = !editable;
-    boton.classList.toggle('punto--etiqueta', !/^\d+$/.test(etiqueta));
+    botonDePunto.textContent = etiqueta;
+    botonDePunto.disabled = !editable;
+    botonDePunto.classList.toggle('punto--etiqueta', !/^\d+$/.test(etiqueta));
+    botonDePunto.classList.remove('punto--activo');
   }
 }
 
 function dibujarPie(estado) {
   const { partido } = estado;
   const partes = [
-    el('span', { texto: `Saca: ${nombreDePareja(partido, partido.marcador.servidor)}` }),
+    el('span', { clase: 'saca' }, [
+      el('i', { clase: 'pelota' }),
+      el('span', { clase: 'saca__txt', texto: `Saca: ${nombreDePareja(partido, partido.marcador.servidor)}` }),
+    ]),
   ];
 
+  // Los avisos de set point y match point: píldoras de amarillo de pelota. El texto lo
+  // decide el motor (`avisosDePunto`), acá solo se pinta.
   for (const aviso of avisosDePunto(partido)) {
-    partes.push(el('span', { clase: 'aviso-punto', texto: `${nombreDePareja(partido, aviso.pareja)}: ${aviso.texto}` }));
+    partes.push(el('span', { clase: 'chip-alerta', texto: aviso.texto }));
   }
 
   const mensaje = mensajeDeEstado(partido);
-  if (mensaje !== null) partes.push(el('span', { clase: 'aviso-fin', texto: mensaje }));
+  if (mensaje !== null) partes.push(el('span', { clase: 'chip-alerta', texto: mensaje }));
 
-  nodos.pie.replaceChildren(...partes);
+  // El mismo texto en los dos lugares donde puede verse. Se escriben juntos, en la misma
+  // pasada: no hay forma de que uno quede viejo.
+  const pintar = (destino) => destino.replaceChildren(...partes.map((parte) => parte.cloneNode(true)));
+  pintar(nodos.pie);
+  pintar(nodos.piePiso);
 }
 
 function dibujarEditor(estado) {
@@ -529,6 +773,10 @@ function dibujarEditor(estado) {
   otro.hidden = true;
   otro.replaceChildren();
 
+  // El dato que se está editando se levanta: sin esto no se sabe de quién es el número.
+  for (const pareja of ['A', 'B']) nodos.puntos[pareja].classList.remove('punto--activo');
+
+  nodos.marcador.classList.remove('marcador--editando');
   if (editor === null) {
     destino.hidden = true;
     destino.replaceChildren();
@@ -537,7 +785,12 @@ function dibujarEditor(estado) {
 
   const { valores, etiquetaActual } = editorAbierto(estado);
 
+  if (editor.tipo !== 'juegos') nodos.puntos[editor.pareja].classList.add('punto--activo');
+
   destino.hidden = false;
+  // En horizontal el editor ocupa la columna de los parciales, así que hay que avisarle al
+  // marcador para que los oculte mientras dura la edición.
+  nodos.marcador.classList.add('marcador--editando');
 
   // Si solo quedaba el valor actual, no hay nada que ofrecer y la fila se cierra (T47).
   const vacio = valores.length === 0;
@@ -551,13 +804,35 @@ function dibujarEditor(estado) {
   }
 
   destino.replaceChildren(
-    el('span', { clase: 'editor__actual', texto: `${etiquetaActual} →` }),
-    ...valores.map((valor) => el('button', {
+    el('span', { clase: 'editor__rotulo' }, [
+      el('span', { clase: 'micro', texto: rotuloDelEditor(estado) }),
+      el('span', { clase: 'editor__valor', texto: etiquetaActual }),
+    ]),
+    el('div', { clase: 'editor__opciones' }, valores.map((valor) => el('button', {
+      clase: 'opcion',
       type: 'button',
       texto: etiquetaDeValor(valor),
       onclick: () => acciones.aplicarValor(editor, valor),
-    })),
+    }))),
+    el('button', {
+      clase: 'editor__cerrar',
+      type: 'button',
+      'aria-label': 'Cerrar la edición',
+      svg: icono(ICONO_CERRAR),
+      onclick: () => acciones.cerrarEditor(),
+    }),
   );
+}
+
+// Qué se está editando, en palabras. Sólo el rótulo: el valor es el que ya muestra el dato.
+//
+// El número de set va acá porque en horizontal los parciales se ocultan mientras se edita
+// (el editor toma su columna en el riel), así que sin esto "Juego de / 6" no diría de qué
+// set habla. Es el índice del set que se está tocando, no una regla.
+function rotuloDelEditor(estado) {
+  const { partido, editor } = estado;
+  if (editor.tipo === 'juegos') return 'Juego del set ' + (editor.indiceSet + 1);
+  return enTieBreak(partido) ? 'TB de' : 'Punto de';
 }
 
 function editorAbierto(estado) {
@@ -582,20 +857,48 @@ function editorAbierto(estado) {
 function dibujarCancha(estado) {
   const { partido } = estado;
   const puede = sePuedeRegistrarPunto(partido);
+  const elegido = estado.jugadorSeleccionado;
 
   for (const puesto of [1, 2, 3, 4]) {
-    const { celda, nombre } = jugadores.get(puesto);
+    const { ficha, nombre, mono, texto } = jugadores.get(puesto);
     const jugador = jugadorPorPuesto(partido, puesto);
-    nombre.textContent = jugador?.nombre ?? '';
+    const textoNombre = jugador?.nombre ?? '';
 
-    celda.classList.toggle('jugador--seleccionado', puede && estado.jugadorSeleccionado === jugador?.id);
+    texto.textContent = textoNombre;
+    // El monograma es la inicial: sin contexto, un nombre largo se lee entero abajo.
+    mono.textContent = inicialDe(textoNombre);
+
+    // Los nombres largos bajan un escalón de tamaño en vez de cortarse con puntos
+    // suspensivos: en la cancha se lee al jugador de frente.
+    const largo = textoNombre.length > 12;
+    texto.classList.toggle('ficha__nombre--largo', largo);
+    // El mismo aviso va en la ficha, no sólo en el nombre: el nombre vive adentro de
+    // `.ficha__hit` y los botones son hermanos de ese botón, así que desde el nombre no se
+    // llega a ellos. La ficha es el ancestro común de los dos.
+    ficha.classList.toggle('ficha--largo', largo);
+
+    const estaElegido = puede && elegido === jugador?.id;
+    ficha.classList.toggle('ficha--elegida', estaElegido);
+    ficha.classList.toggle('ficha--vacia', textoNombre === '');
     // Con el partido terminado tocar un jugador no hace nada (CE-15).
     nombre.disabled = !puede;
   }
+
+  // Con una ficha elegida, las otras tres bajan un escalón: el foco va al que se está por
+  // tocar. Nunca por debajo de 0.7, que es donde el nombre dejaba de leerse.
+  const fichas = document.querySelector('.fichas');
+  if (fichas !== null) fichas.classList.toggle('fichas--con-foco', elegido !== null && puede);
+}
+
+// La inicial del monograma: con acentos y todo. No es una regla de pádel, es pintar texto.
+function inicialDe(nombre) {
+  const limpio = String(nombre).trim();
+  return limpio === '' ? '' : [...limpio][0].toUpperCase();
 }
 
 function dibujarResumen(estado) {
   nodos.resumen.textContent = generarResumen(estado.partido);
+  nodos.motivoFin.textContent = mensajeDeEstado(estado.partido) ?? 'Fin del partido';
 }
 
 // ---------------------------------------------------------------- avisos y copia manual
@@ -614,28 +917,33 @@ export function mostrarAviso(texto, esError = false) {
   globalThis.setTimeout(() => aviso.remove(), esError ? 5200 : 2600);
 }
 
-// El resumen a la vista y seleccionable, para cuando la copia automática no pudoarse
+// El resumen a la vista y seleccionable, para cuando la copia automática no pudo hacerse
 // (contexto no seguro: sirviendo por la IP de la LAN no hay portapapeles).
 export function mostrarModalResumen(texto, alReintentar) {
   const cerrar = () => ocultarModal();
 
-  const modal = el('div', { clase: 'modal', role: 'dialog', 'aria-modal': 'true' }, [
-    el('h2', { clase: 'modal__titulo', texto: 'Resumen del partido' }),
-    el('pre', { clase: 'resumen-modal', tabindex: '0', texto }),
+  const modal = el('div', { clase: 'hoja', role: 'dialog', 'aria-modal': 'true' }, [
+    el('div', { clase: 'hoja__agarre' }),
+    el('div', { clase: 'hoja__titulo' }, [
+      el('span', { clase: 'hoja__jugador', svg: 'Resumen del partido' }),
+    ]),
+    el('pre', { clase: 'hoja__texto', tabindex: '0', texto }),
     el('nav', { clase: 'acciones' }, [
-      el('button', { type: 'button', texto: 'Copiar', onclick: () => alReintentar() }),
-      el('button', { type: 'button', texto: 'Cerrar', onclick: cerrar }),
+      boton('Copiar', () => alReintentar(), { clase: 'btn--pelota', dibujo: ICONO_COPIAR }),
+      boton('Cerrar', cerrar, { dibujo: ICONO_CERRAR }),
     ]),
   ]);
 
   nodos.capaModal.onclick = (evento) => { if (evento.target === nodos.capaModal) cerrar(); };
-  nodos.capaModal.replaceChildren(modal);
+  nodos.capaModal.replaceChildren(el('div', { clase: 'velo' }), modal);
   nodos.capaModal.hidden = false;
 }
 
 // ---------------------------------------------------------------- modal
 
-// Modal de movimientos: entra casi a pantalla completa (T45). Toca fuera lo descarta.
+// Hoja de movimientos. Va ABAJO, no en el centro: así tapa la mitad de abajo de la cancha pero
+// nunca la ficha del jugador que se acaba de tocar, y deja el marcador entero arriba (T45).
+// El velo arranca abajo del marcador, así que el marcador ni se atenúa.
 export function mostrarModalMovimientos(pendiente, alElegir, alDescartar) {
   const cerrar = () => {
     nodos.capaModal.hidden = true;
@@ -643,30 +951,40 @@ export function mostrarModalMovimientos(pendiente, alElegir, alDescartar) {
     nodos.capaModal.onclick = null;
   };
 
+  // 8 movimientos de la lista fija + "Descartar" = 9 celdas: 3×3 exactas. "Sin
+  // especificar" YA viene en la lista (movimientos.js), así que no se agrega otra vez:
+  // duplicado sería 10 celdas y una fila huérfana.
+  //
+  // "Sin especificar" es el único con borde de amarillo de pelota: es el que se toca cuando
+  // nadie vio qué pasó, y tiene que verse distinto de los siete movimientos de verdad.
   const botones = MOVIMIENTOS.map((movimiento) => el('button', {
+    clase: movimiento.id === 'sin_especificar' ? 'mov mov--pelota' : 'mov',
     type: 'button',
     texto: movimiento.etiqueta,
     onclick: () => { cerrar(); alElegir(movimiento.id); },
   }));
 
-  const modal = el('div', { clase: 'modal', role: 'dialog', 'aria-modal': 'true' }, [
-    el('h2', {
-      clase: 'modal__titulo',
-      texto: tituloDelPuntoPendiente(pendiente.jugador, pendiente.resultado),
-    }),
-    el('div', { clase: 'modal__movimientos' }, botones),
-    el('button', {
-      clase: 'modal__descartar',
-      type: 'button',
-      texto: 'Descartar',
-      onclick: () => { cerrar(); alDescartar(); },
-    }),
-  ]);
+  const hojas = [
+    el('div', { clase: 'hoja__agarre' }),
+    el('div', { clase: 'hoja__titulo' }, [
+      el('span', { clase: 'hoja__jugador', svg: '' }),
+      el('span', { clase: `hoja__resultado hoja__resultado--${pendiente.resultado === 'ganado' ? 'verde' : 'rojo'}` }, [
+        el('span', { texto: pendiente.resultado === 'ganado' ? '✓ Ganó' : '✗ Falló' }),
+      ]),
+    ]),
+    el('div', { clase: 'movs' }, [
+      ...botones,
+      boton('Descartar', () => { cerrar(); alDescartar(); }, { clase: 'mov mov--soltar', dibujo: ICONO_CERRAR }),
+    ]),
+  ];
+
+  const titulo = hojas[1].querySelector('.hoja__jugador');
+  titulo.append('Punto de ', el('em', { texto: pendiente.jugador?.nombre ?? '' }));
 
   nodos.capaModal.onclick = (evento) => {
     if (evento.target === nodos.capaModal) { cerrar(); alDescartar(); }
   };
-  nodos.capaModal.replaceChildren(modal);
+  nodos.capaModal.replaceChildren(el('div', { clase: 'velo' }), el('div', { clase: 'hoja', role: 'dialog', 'aria-modal': 'true' }, hojas));
   nodos.capaModal.hidden = false;
 }
 

@@ -121,6 +121,11 @@ const acciones = {
     dibujar();
   },
 
+  cerrarEditor() {
+    estado.editor = null;
+    dibujar();
+  },
+
   aplicarValor(editor, valor) {
     const { partido } = estado;
     estado.editor = null;
@@ -275,10 +280,12 @@ function persistir() {
 function reiniciarFormulario() {
   const formulario = document.querySelector('.creacion');
   if (formulario === null) return;
-  for (const control of formulario.querySelectorAll('input')) control.value = '';
-  formulario.elements.setsAElegir.value = '3';
-  formulario.elements.modalidad.value = 'ventaja';
-  formulario.elements.parejaQueSacaElPrimero.value = 'A';
+
+  // Sólo los de texto: los `<input hidden>` de los grupos de opciones llevan la
+  // configuración y hay que ponerlos en su valor por defecto, no vaciarlos.
+  for (const control of formulario.querySelectorAll('input[type="text"]')) control.value = '';
+
+  ui.reiniciarOpciones();
 }
 
 // ================================================================= arranque

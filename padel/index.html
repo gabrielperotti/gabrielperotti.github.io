@@ -3,18 +3,26 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-    <meta name="theme-color" content="#101418" />
+    <meta name="theme-color" content="#060a0f" />
     <meta name="description" content="Marcador de pádel para llevar el score desde la cancha." />
     <title>Padel Scores</title>
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
-    <!-- Toda la app se dibuja acá desde ui.js. -->
-    <div id="app" class="app"></div>
+    <!-- Toda la app se dibuja acá desde ui.js. La orientación la resuelve el CSS con
+         `@media (orientation: ...)`: nada de JavaScript que adivine cómo se está sostiene
+         el teléfono, así que rotar no puede desincronizar nada. -->
+    <div id="app" class="pantalla"></div>
+
+    <!-- El velo y la hoja de movimientos van aparte del armazón, con posición fija: la hoja
+         se dibuja arriba del marcador pero el velo arranca DEBAJO de él, así el marcador
+         nunca se atenúa. -->
     <div id="capa-modal" class="capa-modal" hidden></div>
+
     <!-- Avisos flotantes: copiado, errores. Viven fuera de las vistas para poder verse
          desde cualquiera de ellas. -->
     <div id="avisos" class="avisos" role="status" aria-live="polite"></div>
+
     <script type="module" src="js/app.js"></script>
   </body>
 </html>
