@@ -3,7 +3,13 @@
 // Formato exacto en el plan §11.
 
 import { MOVIMIENTOS, etiquetaMovimiento } from './movimientos.js';
-import { resultadoPartido, etiquetaResultadoSet, mejorMovimiento, peorMovimiento } from './motor.js';
+import {
+  resultadoPartido,
+  etiquetaResultadoSet,
+  mejorMovimiento,
+  peorMovimiento,
+  nombreDeEquipo,
+} from './motor.js';
 
 const SEPARADOR = '·';
 
@@ -34,20 +40,12 @@ export function generarResumen(partido) {
 }
 
 // `<equipoA>  <setsA>-<setsB>  <equipoB>`, contando solo sets cerrados.
+//
+// El nombre del equipo lo arma el motor (`nombreDeEquipo`): los nombres de los jugadores
+// unidos. No hay nombre de pareja en el modelo, así que acá no hay nada que decidir.
 function lineaDeResultado(partido) {
   const { A, B } = resultadoPartido(partido);
-  return `${nombreDePareja(partido, 'A')}  ${A}-${B}  ${nombreDePareja(partido, 'B')}`;
-}
-
-// Una pareja sin nombre cae a "Pareja A" / "Pareja B" (S-4).
-function nombreDePareja(partido, letra) {
-  const pareja = partido.parejas[letra];
-  if (pareja === undefined) return `Pareja ${letra}`;
-
-  const nombreDePareja = pareja.nombre?.trim();
-  if (nombreDePareja) return nombreDePareja;
-
-  return pareja.jugadores.map((jugador) => jugador.nombre).filter(Boolean).join('/');
+  return `${nombreDeEquipo(partido, 'A')}  ${A}-${B}  ${nombreDeEquipo(partido, 'B')}`;
 }
 
 // Sets cerrados separados por dos espacios, más el set en curso al final si lo hay.

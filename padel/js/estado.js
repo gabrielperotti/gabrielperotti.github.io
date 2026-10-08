@@ -62,6 +62,12 @@ function tieneFormaDePartido(datos) {
   for (const letra of ['A', 'B']) {
     const pareja = datos.parejas?.[letra];
     if (pareja === null || typeof pareja !== 'object') return false;
+    // `nombre` en la pareja es la forma vieja, cuando el equipo tenía un nombre propio.
+    // Ahora no existe: los equipos se llaman por sus jugadores. No hay migración (el estado es
+    // efímero, constitución 9), así que un partido guardado con esa forma se descarta y se
+    // empieza de cero (RF-60). Adoptarlo no rompería nada visible —el nombre está de más y
+    // nadie lo lee—, pero es un estado de una versión del modelo que la app ya no tiene.
+    if ('nombre' in pareja) return false;
     if (!Array.isArray(pareja.jugadores) || pareja.jugadores.length === 0) return false;
     if (!pareja.jugadores.every((jugador) => typeof jugador?.nombre === 'string')) return false;
     if (!pareja.jugadores.every((jugador) => typeof jugador?.id === 'string')) return false;

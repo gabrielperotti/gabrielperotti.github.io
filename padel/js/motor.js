@@ -112,6 +112,10 @@ export function setEnCurso(partido) {
 
 // Un partido arranca en cero, con el saque declarado y un solo set abierto (RF-6).
 // Lanza error si falta el nombre de un jugador o si la configuración no es válida (RF-4).
+//
+// `parejaA` y `parejaB` traen sólo `jugadores`. Si viene de más, se ignora: el estado es
+// efímero (constitución 9) y un partido guardado con la forma vieja se descarta al cargarlo
+// (RF-60), así que no hay nada que migrar.
 export function crearPartido({ parejaA, parejaB, setsAElegir = 3, modalidad = MODALIDAD_VENTAJA, parejaQueSacaElPrimero = 'A' } = {}) {
   const jugadores = [...(parejaA?.jugadores ?? []), ...(parejaB?.jugadores ?? [])];
   if (jugadores.length !== 4 || jugadores.some((nombre) => limpiarNombre(nombre) === '')) {
@@ -147,16 +151,35 @@ export function crearPartido({ parejaA, parejaB, setsAElegir = 3, modalidad = MO
   };
 }
 
+// Una pareja es sólo sus jugadores: no hay nombre de pareja en el modelo. Los equipos se
+// identifican siempre por los nombres de quienes juegan (`nombreDeEquipo`).
 function crearPareja(letra, datos, primerPuesto) {
-  const { nombre = null, jugadores = [] } = datos ?? {};
+  const { jugadores = [] } = datos ?? {};
   return {
-    nombre: limpiarNombre(nombre),
     jugadores: jugadores.map((jugador, i) => ({
       id: `j${primerPuesto + i}`,
       nombre: limpiarNombre(jugador),
       puesto: primerPuesto + i,
     })),
   };
+}
+
+// Cómo se escribe un equipo: los nombres de sus jugadores unidos con una barra, en orden de
+// puesto en la cancha. `Gabi/Maxi`.
+//
+// Es la única fuente de ese texto: la usan el marcador, el pie (quién saca) y el resumen.
+// No hay nombre de pareja que pueda overriding, así que no hay nada que decidir acá — salvo
+// un estado que no venga de `crearPartido`, donde sí hace falta un texto que no esté vacío.
+export function nombreDeEquipo(partido, letra) {
+  const pareja = partido?.parejas?.[letra];
+  const jugadores = (pareja?.jugadores ?? [])
+    .slice()
+    .sort((a, b) => a.puesto - b.puesto)
+    .map((jugador) => limpiarNombre(jugador.nombre))
+    .filter((nombre) => nombre !== '');
+
+  if (jugadores.length === 0) return `Pareja ${letra}`;
+  return jugadores.join('/');
 }
 
 // Editar el punto de una pareja en el tie-break del set en curso.
@@ -409,7 +432,6 @@ function copiaProfunda(partido) {
 
 function copiarPareja(pareja) {
   return {
-    nombre: pareja.nombre,
     jugadores: pareja.jugadores.map((jugador) => ({ ...jugador })),
   };
 }

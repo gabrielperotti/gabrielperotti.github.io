@@ -17,6 +17,7 @@ import {
   puedeEditarPuntos,
   cerradoAMano,
   derivados,
+  nombreDeEquipo,
   MODALIDADES,
 } from './motor.js';
 import { MOVIMIENTOS } from './movimientos.js';
@@ -29,20 +30,6 @@ export const ETIQUETAS_MODALIDAD = {
 };
 
 // ================================================================= funciones puras
-
-// Nombre visible de una pareja: el que se le puso, o los jugadores, o "Pareja A" (S-4).
-export function nombreDePareja(partido, letra) {
-  const pareja = partido?.parejas?.[letra];
-  if (pareja === undefined) return `Pareja ${letra}`;
-
-  const nombre = typeof pareja.nombre === 'string' ? pareja.nombre.trim() : '';
-  if (nombre !== '') return nombre;
-
-  const jugadores = pareja.jugadores
-    .map((jugador) => (typeof jugador.nombre === 'string' ? jugador.nombre.trim() : ''))
-    .filter((nombreDeJugador) => nombreDeJugador !== '');
-  return jugadores.length > 0 ? jugadores.join('/') : `Pareja ${letra}`;
-}
 
 // Cómo se escribe un valor del editor: el motor ya devuelve valores con su forma final.
 export function etiquetaDeValor(valor) {
@@ -148,8 +135,8 @@ export function leerFormulario(formulario) {
   };
 
   return {
-    parejaA: { nombre: valor('nombreParejaA'), jugadores: [valor('jugadorA1'), valor('jugadorA2')] },
-    parejaB: { nombre: valor('nombreParejaB'), jugadores: [valor('jugadorB1'), valor('jugadorB2')] },
+    parejaA: { jugadores: [valor('jugadorA1'), valor('jugadorA2')] },
+    parejaB: { jugadores: [valor('jugadorB1'), valor('jugadorB2')] },
     setsAElegir: numero('setsAElegir', 3),
     modalidad: valor('modalidad') || 'ventaja',
     parejaQueSacaElPrimero: valor('parejaQueSacaElPrimero') || 'A',
@@ -222,6 +209,13 @@ function boton(texto, alTocar, { clase = '', dibujo = null } = {}) {
 let nodos = null;
 let jugadores = new Map();
 let acciones = null;
+
+// ¿El clic fue fuera de la hoja? El velo y la capa son lo mismo para el usuario: tocar el
+// fondo descarta. Comparar sólo con la capa no alcanzaba: el velo es un hijo y el evento
+// llega con `target` en el velo, así que tocar fuera no cerraba nada.
+function esToqueFuera(evento) {
+  return evento.target === nodos.capaModal || evento.target?.classList?.contains('velo') === true;
+}
 
 // app.js inyecta el cableado una vez, antes de montar.
 export function conectarAcciones(lasAcciones) {
@@ -296,7 +290,7 @@ function construirCreacion() {
     grupoPareja('B', 'Pareja B'),
     construirOpciones(),
     el('div', { clase: 'creacion__pie' }, [
-      el('span', { clase: 'micro creacion__pista', texto: 'Los 4 nombres de jugador son obligatorios' }),
+      el('span', { clase: 'micro creacion__pista', texto: 'Los 4 nombres son obligatorios' }),
       boton('Empezar', () => acciones.empezar(), {
         clase: 'btn--pelota btn--alto boton-principal',
         dibujo: ICONO_RAQUETA,
@@ -307,17 +301,12 @@ function construirCreacion() {
   return contenedor;
 }
 
+// La tarjeta de un lado de la cancha. Sólo los dos jugadores: el nombre de pareja no es un
+// dato elegible, los equipos se llaman por los nombres de quienes juegan.
+//
+// "Pareja A" / "Pareja B" acá es la etiqueta del lado (izquierda o derecha de la red, color
+// cian o naranja), no el nombre del equipo.
 function grupoPareja(letra, rotulo) {
-  const campoNombre = el('label', { clase: 'campo campo--ancho' }, [
-    el('span', { texto: 'Nombre de la pareja · opcional' }),
-    el('input', {
-      type: 'text',
-      name: `nombrePareja${letra}`,
-      placeholder: 'Ej: Los Tigres',
-      autocomplete: 'off',
-    }),
-  ]);
-
   const casillas = ['1', '2'].map((n) => el('label', { clase: 'campo' }, [
     el('span', { texto: `Jugador ${n}` }),
     el('input', {
@@ -334,7 +323,6 @@ function grupoPareja(letra, rotulo) {
       el('i', { clase: 'creacion__punto' }),
       rotulo,
     ]),
-    campoNombre,
     ...casillas,
   ]);
 }
@@ -688,8 +676,8 @@ function actualizarPantallaCreacion() {
 
 function dibujarCuentas(partido) {
   const { A, B } = resultadoPartido(partido);
-  nodos.cuenta.equipoA.textContent = nombreDePareja(partido, 'A');
-  nodos.cuenta.equipoB.textContent = nombreDePareja(partido, 'B');
+  nodos.cuenta.equipoA.textContent = nombreDeEquipo(partido, 'A');
+  nodos.cuenta.equipoB.textContent = nombreDeEquipo(partido, 'B');
   nodos.cuenta.A.textContent = String(A);
   nodos.cuenta.B.textContent = String(B);
   // La pelota de saque va pegada al nombre de quien saca, en la fila 1 del marcador.
@@ -745,7 +733,7 @@ function dibujarPie(estado) {
   const partes = [
     el('span', { clase: 'saca' }, [
       el('i', { clase: 'pelota' }),
-      el('span', { clase: 'saca__txt', texto: `Saca: ${nombreDePareja(partido, partido.marcador.servidor)}` }),
+      el('span', { clase: 'saca__txt', texto: `Saca: ${nombreDeEquipo(partido, partido.marcador.servidor)}` }),
     ]),
   ];
 
@@ -934,7 +922,7 @@ export function mostrarModalResumen(texto, alReintentar) {
     ]),
   ]);
 
-  nodos.capaModal.onclick = (evento) => { if (evento.target === nodos.capaModal) cerrar(); };
+  nodos.capaModal.onclick = (evento) => { if (esToqueFuera(evento)) cerrar(); };
   nodos.capaModal.replaceChildren(el('div', { clase: 'velo' }), modal);
   nodos.capaModal.hidden = false;
 }
@@ -982,7 +970,7 @@ export function mostrarModalMovimientos(pendiente, alElegir, alDescartar) {
   titulo.append('Punto de ', el('em', { texto: pendiente.jugador?.nombre ?? '' }));
 
   nodos.capaModal.onclick = (evento) => {
-    if (evento.target === nodos.capaModal) { cerrar(); alDescartar(); }
+    if (esToqueFuera(evento)) { cerrar(); alDescartar(); }
   };
   nodos.capaModal.replaceChildren(el('div', { clase: 'velo' }), el('div', { clase: 'hoja', role: 'dialog', 'aria-modal': 'true' }, hojas));
   nodos.capaModal.hidden = false;

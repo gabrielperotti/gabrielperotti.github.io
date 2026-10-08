@@ -150,6 +150,7 @@ const acciones = {
     if (!confirmar('¿Reiniciar el partido? Se borran el marcador y las estadísticas.')) return;
 
     // Conserva configuración y nombres, vuelve marcador y estadísticas a cero (RF-66).
+    estado.jugadorSeleccionado = null;
     aplicar(reiniciar(estado.partido));
   },
 
@@ -182,12 +183,19 @@ function confirmarPunto(movimientoId) {
     movimientoId,
   }));
 
-  // La selección se conserva: encadenar puntos es lo normal y tiene que ser rápido.
+  // El jugador ya no queda elegido: el punto está anotado, así que los botones verde/rojo
+  // desaparecen y la ficha vuelve a su estado normal. Para el siguiente punto hay que volver
+  // a tocar el jugador.
+  estado.jugadorSeleccionado = null;
+  dibujar();
 }
 
 function descartarPunto() {
   // Descartar el modal no registra nada (RF-33).
   estado.pendiente = null;
+  // La selección se limpia también acá: si no, el modal descartado dejaba a un jugador con
+  // los botones verdes y rojos abiertos y ningún flujo los cerraba.
+  estado.jugadorSeleccionado = null;
   ui.ocultarModal();
   dibujar();
 }

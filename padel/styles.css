@@ -1189,10 +1189,6 @@ body {
   min-width: 0;
 }
 
-.campo--ancho {
-  grid-column: 1 / -1;
-}
-
 .campo > span {
   font: 700 var(--f-11) / 1 var(--sans);
   color: var(--t-3);
