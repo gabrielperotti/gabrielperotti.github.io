@@ -230,6 +230,31 @@ body {
   flex: none;
 }
 
+/* Cabecera fija: scrollea la ventana, así que sticky contra el viewport. */
+.ayuda__cab {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  flex-wrap: nowrap;
+  margin-inline: calc(var(--lateral) * -1);
+  padding: max(8px, env(safe-area-inset-top, 0px)) var(--lateral) 8px;
+  background: var(--n-0);
+  border-bottom: 1px solid var(--linea);
+}
+
+.ayuda__cab-botones {
+  display: flex;
+  gap: 8px;
+}
+
+.ayuda__cab-botones .btn {
+  min-height: 44px;
+}
+
+.ayuda__seccion {
+  scroll-margin-top: 72px;
+}
+
 .ayuda__indice {
   display: flex;
   flex-wrap: wrap;
@@ -248,7 +273,7 @@ body {
 }
 
 .ayuda__seccion {
-  scroll-margin-top: 8px;
+  scroll-margin-top: 72px;
 }
 
 .ayuda__seccion h3 {

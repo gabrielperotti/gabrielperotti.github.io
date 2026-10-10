@@ -1072,9 +1072,14 @@ function construirAyuda() {
     })));
 
   return [
-    el('header', { clase: 'historial__cab' }, [
+    el('header', { clase: 'historial__cab ayuda__cab' }, [
       el('h2', { texto: 'Ayuda' }),
-      boton('Volver', () => acciones.volverDeAyuda()),
+      el('div', { clase: 'ayuda__cab-botones' }, [
+        boton('Arriba', () => window.scrollTo({ top: 0, behavior: 'smooth' }), {
+          dibujo: '<path d="M12 19V5M5 12l7-7 7 7" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>',
+        }),
+        boton('Volver', () => acciones.volverDeAyuda()),
+      ]),
     ]),
     el('p', { clase: 'historial__nota', texto: 'Cómo se usa Padel Scores, paso a paso. Tocá un tema para ir directo.' }),
     indice,
