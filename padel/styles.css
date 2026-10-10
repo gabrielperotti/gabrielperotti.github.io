@@ -212,6 +212,214 @@ body {
   text-align: left;
 }
 
+
+.historial__botones {
+  display: flex;
+  gap: 8px;
+}
+
+.historial__botones .btn {
+  flex: 0 0 auto;
+  min-height: 44px;
+}
+
+/* ------------------------------------------------------------------ ayuda */
+
+.ayuda {
+  /* La pantalla tiene alto fijo: la ayuda es larga y scrollea con la página. */
+  flex: none;
+}
+
+.ayuda__indice {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.ayuda__enlace {
+  min-height: 36px;
+  padding: 0 11px;
+  border: 1px solid var(--linea);
+  border-radius: var(--r-full);
+  background: var(--n-3);
+  color: var(--t-1);
+  font: 700 var(--f-13) / 1.1 var(--sans);
+  text-align: left;
+}
+
+.ayuda__seccion {
+  scroll-margin-top: 8px;
+}
+
+.ayuda__seccion h3 {
+  font: 800 var(--f-18) / 1.2 var(--sans);
+}
+
+.ayuda__lista {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding-left: 20px;
+}
+
+.ayuda__nota {
+  padding: 10px 12px;
+  border-left: 3px solid var(--pelota);
+  border-radius: var(--r-chip);
+  background: var(--n-1);
+  color: var(--t-2);
+}
+
+.ayuda__pregunta {
+  border: 1px solid var(--linea);
+  border-radius: var(--r-sm);
+  background: var(--n-1);
+}
+
+.ayuda__pregunta summary {
+  padding: 12px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.ayuda__pregunta p {
+  padding: 0 12px 12px;
+  color: var(--t-2);
+}
+
+.ayuda__volver {
+  flex: none;
+}
+
+/* Maquetas: dibujos estáticos con los colores de la app. No son controles. */
+.maqueta {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+  padding: 10px;
+  border: 1px dashed var(--n-4);
+  border-radius: var(--r-sm);
+  background: var(--n-0);
+  pointer-events: none;
+  user-select: none;
+}
+
+.maqueta__fila {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+}
+
+.maqueta__fila--entre {
+  justify-content: space-between;
+}
+
+.maqueta__rotulo,
+.maqueta__leyenda {
+  color: var(--t-3);
+  font: 700 var(--f-11) / 1.2 var(--sans);
+}
+
+.maqueta__eq,
+.maqueta__campo,
+.maqueta__op,
+.maqueta__golpe,
+.maqueta__empezar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 26px;
+  padding: 0 8px;
+  border-radius: var(--r-chip);
+  background: var(--n-3);
+  color: var(--t-1);
+  font: 700 var(--f-11) / 1 var(--sans);
+}
+
+.maqueta__eq--a { color: var(--eq-a); }
+.maqueta__eq--b { color: var(--eq-b); }
+.maqueta__campo { flex: 1 1 60px; color: var(--t-3); justify-content: flex-start; }
+.maqueta__op--on { background: var(--n-4); outline: 1px solid var(--pelota); }
+.maqueta__empezar { flex: 1; background: var(--pelota); color: var(--pelota-tinta); font-weight: 800; }
+
+.maqueta__nombres {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font: 800 var(--f-13) / 1.1 var(--sans);
+}
+
+.maqueta__nombres--a { color: var(--eq-a); }
+.maqueta__nombres--b { color: var(--eq-b); }
+
+.maqueta__pelota {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--pelota);
+}
+
+.maqueta__punto {
+  display: inline-grid;
+  place-items: center;
+  min-width: 52px;
+  padding: 6px 8px;
+  border-radius: var(--r-chip);
+  background: var(--n-3);
+  font: 800 var(--f-22, 22px) / 1 var(--sans);
+}
+
+.maqueta__punto--a { color: var(--eq-a); }
+.maqueta__punto--b { color: var(--eq-b); }
+
+.maqueta__ficha {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.maqueta__jugador {
+  flex: 1;
+  padding: 10px;
+  border: 2px solid var(--eq-a);
+  border-radius: var(--r-sm);
+  background: var(--eq-a-lavado);
+  color: var(--t-1);
+  font: 800 var(--f-15) / 1 var(--sans);
+}
+
+.maqueta__res {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: var(--r-sm);
+  font: 800 var(--f-18) / 1 var(--sans);
+}
+
+.maqueta__res--ok { background: var(--verde); color: var(--verde-tinta); }
+.maqueta__res--no { background: var(--rojo); color: #fff; }
+
+.maqueta__grilla {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 5px;
+}
+
+.maqueta__golpe {
+  min-height: 32px;
+  padding: 0 4px;
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+
+.maqueta__golpe--pelota { outline: 1px solid var(--pelota); }
+.maqueta__golpe--soltar { color: #ff9d95; }
+
 .partido {
   display: flex;
   flex-direction: column;

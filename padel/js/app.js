@@ -38,6 +38,7 @@ let estado = {
   pendienteGuardado: null,
   errorPersistencia: null,
   vistaRetorno: 'crear',
+  vistaRetornoAyuda: 'crear',
   historial: { estado: 'ausente' },
   registroId: null,
   registroSeleccionado: null,
@@ -281,6 +282,24 @@ const acciones = {
     dibujar();
   },
 
+  // La ayuda es contenido estático: no toca el partido. Vuelve a la vista desde la que se abrió
+  // (incluidos historial y detalle, que conservan lo que estaban mostrando).
+  abrirAyuda() {
+    if (estado.avisoFin || estado.vista === 'ayuda') return;
+    estado.vistaRetornoAyuda = estado.vista;
+    limpiarTodo();
+    estado.vista = 'ayuda';
+    dibujar();
+  },
+
+  volverDeAyuda() {
+    if (estado.vista !== 'ayuda') return;
+    limpiarTodo();
+    estado.vista = estado.vistaRetornoAyuda;
+    if (estado.partido !== null && ['partido', 'fin'].includes(estado.vista)) ui.mudarMarcadorA(estado.vista);
+    dibujar();
+  },
+
   reintentarHistorial() {
     if (estado.reintentoHistorial?.tipo === 'eliminar') {
       eliminarConfirmado(estado.reintentoHistorial.id);
@@ -520,7 +539,7 @@ export function iniciar({ contenedor, capaModal } = {}) {
   Object.assign(estado, {
     partido: null, vista: 'crear', jugadorSeleccionado: null, pendiente: null, editor: null,
     seguimiento: null, conservacion: 'activo', pendienteGuardado: null, errorPersistencia: null,
-    vistaRetorno: 'crear', historial: { estado: 'ausente' }, registroId: null,
+    vistaRetorno: 'crear', vistaRetornoAyuda: 'crear', historial: { estado: 'ausente' }, registroId: null,
     registroSeleccionado: null, errorHistorial: null, reintentoHistorial: null, ultimoPunto: null, avisoFin: false,
   });
   ui.ocultarModal();

@@ -24,6 +24,7 @@ import {
 } from './motor.js';
 import { MOVIMIENTOS, etiquetaMovimiento } from './movimientos.js';
 import { generarResumen } from './resumen.js';
+import { SECCIONES, ETIQUETAS_GOLPES } from './ayuda.js';
 
 export const ETIQUETAS_MODALIDAD = {
   ventaja: 'Ventaja tradicional',
@@ -327,11 +328,13 @@ export function montar(contenedor, capaModal) {
     fin: el('section', { clase: 'fin', 'aria-label': 'Resumen del partido' }),
     historial: el('section', { clase: 'historial', 'aria-label': 'Historial de partidos' }),
     detalle: el('section', { clase: 'historial', 'aria-label': 'Detalle del partido' }),
+    ayuda: el('section', { clase: 'historial ayuda', 'aria-label': 'Ayuda' }),
   };
 
   vistas.crear.append(construirCreacion());
   vistas.partido.append(construirMarcador(), construirCancha(), construirAccionesDePartido());
   vistas.fin.append(construirFin());
+  vistas.ayuda.append(...construirAyuda());
   const avisoPersistencia = el('aside', { clase: 'conservacion', hidden: true });
   const textoPersistencia = el('p');
   avisoPersistencia.append(textoPersistencia, boton('Reintentar', () => acciones.reintentar()));
@@ -388,7 +391,10 @@ function construirCreacion() {
         clase: 'btn--pelota btn--alto boton-principal',
         dibujo: ICONO_RAQUETA,
       }),
-      boton('Historial', () => acciones.abrirHistorial()),
+      el('div', { clase: 'acciones__par' }, [
+        boton('Historial', () => acciones.abrirHistorial()),
+        boton('Ayuda', () => acciones.abrirAyuda()),
+      ]),
     ]),
   );
 
@@ -669,6 +675,7 @@ function construirAccionesDePartido() {
     boton('Anular último punto', () => acciones.anularUltimoPunto(), { clase: 'btn--anular', dibujo: ICONO_VOLVER }),
     boton('Cerrar', () => acciones.cerrar(), { clase: 'btn--peligro', dibujo: ICONO_CERRAR }),
     boton('Historial', () => acciones.abrirHistorial()),
+    boton('Ayuda', () => acciones.abrirAyuda()),
   ]);
 }
 
@@ -692,7 +699,10 @@ function construirFin() {
           boton('Reiniciar', () => acciones.reiniciar(), { dibujo: ICONO_REINICIAR }),
           boton('Empezar otro', () => acciones.empezarOtro(), { clase: 'btn--peligro', dibujo: ICONO_MAS }),
         ]),
-        boton('Historial', () => acciones.abrirHistorial()),
+        el('div', { clase: 'acciones__par' }, [
+          boton('Historial', () => acciones.abrirHistorial()),
+          boton('Ayuda', () => acciones.abrirAyuda()),
+        ]),
       ]),
     ]),
 
@@ -745,6 +755,8 @@ export function render(estado) {
   for (const nodo of Object.values(nodos.vistas)) nodo.inert = estado.avisoFin === true;
   if (estado.avisoFin) mostrarModalFin(estado);
 
+  if (vista === 'ayuda') return;
+
   if (vista === 'historial' || vista === 'detalle') {
     dibujarHistorial(estado);
     return;
@@ -765,7 +777,7 @@ export function render(estado) {
   dibujarResumen(estado);
   for (const vistaDeAcciones of [nodos.vistas.partido, nodos.vistas.fin]) {
     for (const nodo of vistaDeAcciones.querySelectorAll('.acciones button')) {
-      nodo.disabled = controlesBloqueados(estado) && !['Historial', 'Copiar resumen'].includes(nodo.textContent.trim());
+      nodo.disabled = controlesBloqueados(estado) && !['Historial', 'Ayuda', 'Copiar resumen'].includes(nodo.textContent.trim());
       if (nodo.classList.contains('btn--anular')) {
         nodo.disabled = !anulacionDisponible(estado) || estado.avisoFin === true;
       }
@@ -997,7 +1009,10 @@ function dibujarHistorial(estado) {
   const destino = nodos.vistas[estado.vista];
   const encabezado = el('header', { clase: 'historial__cab' }, [
     el('h2', { texto: detalle ? 'Detalle del partido' : 'Historial' }),
-    boton(detalle ? 'Volver a la lista' : 'Volver', () => detalle ? acciones.abrirHistorial() : acciones.volverDeHistorial()),
+    el('div', { clase: 'historial__botones' }, [
+      boton(detalle ? 'Volver a la lista' : 'Volver', () => detalle ? acciones.abrirHistorial() : acciones.volverDeHistorial()),
+      boton('Ayuda', () => acciones.abrirAyuda()),
+    ]),
   ]);
   const contenido = [encabezado, el('p', { clase: 'historial__nota', texto: 'Se guarda solo en este navegador y dispositivo. Si borrás los datos del navegador, podés perder el historial.' })];
   if (estado.errorHistorial != null) {
@@ -1041,6 +1056,118 @@ function dibujarHistorial(estado) {
     }
   }
   destino.replaceChildren(...contenido);
+}
+
+// ---------------------------------------------------------------- ayuda
+
+// Contenido estático: se construye una vez al montar. Las maquetas son dibujos decorativos
+// (aria-hidden), no controles: no hacen nada al tocarlas.
+function construirAyuda() {
+  const indice = el('nav', { clase: 'ayuda__indice', 'aria-label': 'Índice de la ayuda' },
+    SECCIONES.map((seccion) => el('button', {
+      clase: 'ayuda__enlace',
+      type: 'button',
+      texto: seccion.titulo,
+      onclick: () => document.getElementById(`ayuda-${seccion.id}`)?.scrollIntoView({ block: 'start' }),
+    })));
+
+  return [
+    el('header', { clase: 'historial__cab' }, [
+      el('h2', { texto: 'Ayuda' }),
+      boton('Volver', () => acciones.volverDeAyuda()),
+    ]),
+    el('p', { clase: 'historial__nota', texto: 'Cómo se usa Padel Scores, paso a paso. Tocá un tema para ir directo.' }),
+    indice,
+    ...SECCIONES.map(seccionDeAyuda),
+    boton('Volver', () => acciones.volverDeAyuda(), { clase: 'ayuda__volver' }),
+  ];
+}
+
+function seccionDeAyuda(seccion) {
+  return el('section', { clase: 'historico ayuda__seccion', id: `ayuda-${seccion.id}` }, [
+    el('h3', { texto: seccion.titulo }),
+    ...seccion.bloques.map(bloqueDeAyuda),
+  ]);
+}
+
+function bloqueDeAyuda(bloque) {
+  switch (bloque.tipo) {
+    case 'parrafo': return el('p', { texto: bloque.texto });
+    case 'nota': return el('p', { clase: 'ayuda__nota', texto: bloque.texto });
+    case 'pasos': return el('ol', { clase: 'ayuda__lista' }, bloque.items.map((texto) => el('li', { texto })));
+    case 'lista': return el('ul', { clase: 'ayuda__lista' }, bloque.items.map((texto) => el('li', { texto })));
+    case 'golpes': return el('p', { texto: `Los golpes disponibles son: ${ETIQUETAS_GOLPES.join(', ')}.` });
+    case 'maqueta': return maquetaDeAyuda(bloque.id);
+    case 'pregunta': return el('details', { clase: 'ayuda__pregunta' }, [
+      el('summary', { texto: bloque.pregunta }),
+      el('p', { texto: bloque.respuesta }),
+    ]);
+    default: return null;
+  }
+}
+
+function maquetaDeAyuda(id) {
+  const caja = (clase, hijos) => el('div', { clase: `maqueta ${clase}`, 'aria-hidden': 'true' }, hijos);
+  const span = (clase, texto) => el('span', { clase, texto });
+
+  if (id === 'formulario') {
+    return caja('maqueta--formulario', [
+      el('div', { clase: 'maqueta__fila' }, [span('maqueta__eq maqueta__eq--a', 'Pareja A'), span('maqueta__campo', 'Jugador 1'), span('maqueta__campo', 'Jugador 2')]),
+      el('div', { clase: 'maqueta__fila' }, [span('maqueta__eq maqueta__eq--b', 'Pareja B'), span('maqueta__campo', 'Jugador 1'), span('maqueta__campo', 'Jugador 2')]),
+      el('div', { clase: 'maqueta__fila' }, [span('maqueta__rotulo', 'Sets'), span('maqueta__op', '1'), span('maqueta__op maqueta__op--on', '3'), span('maqueta__op', '5')]),
+      el('div', { clase: 'maqueta__fila' }, [span('maqueta__rotulo', 'Modalidad'), span('maqueta__op', 'Ventaja'), span('maqueta__op maqueta__op--on', 'Oro'), span('maqueta__op', 'Star')]),
+      el('div', { clase: 'maqueta__fila' }, [span('maqueta__rotulo', 'Saca primero'), span('maqueta__op maqueta__op--on', 'Pareja A'), span('maqueta__op', 'Pareja B')]),
+      el('div', { clase: 'maqueta__fila' }, [span('maqueta__empezar', 'Empezar')]),
+    ]);
+  }
+
+  if (id === 'marcador') {
+    return caja('maqueta--marcador', [
+      el('div', { clase: 'maqueta__fila maqueta__fila--entre' }, [
+        el('span', { clase: 'maqueta__nombres maqueta__nombres--a' }, [el('i', { clase: 'maqueta__pelota' }), 'Ana / Bea']),
+        span('maqueta__nombres maqueta__nombres--b', 'Cris / Dani'),
+      ]),
+      el('div', { clase: 'maqueta__fila maqueta__fila--entre' }, [
+        span('maqueta__rotulo', 'Parciales 4–3'),
+        span('maqueta__rotulo', 'Sets 1 – 0'),
+      ]),
+      el('div', { clase: 'maqueta__fila maqueta__fila--entre' }, [
+        span('maqueta__punto maqueta__punto--a', '40'),
+        span('maqueta__rotulo', 'punto'),
+        span('maqueta__punto maqueta__punto--b', '30'),
+      ]),
+      el('div', { clase: 'maqueta__fila' }, [span('chip-alerta', 'set point')]),
+    ]);
+  }
+
+  if (id === 'ficha') {
+    return caja('maqueta--ficha', [
+      el('div', { clase: 'maqueta__ficha' }, [
+        span('maqueta__jugador', 'Ana'),
+        span('maqueta__res maqueta__res--ok', '✓'),
+        span('maqueta__res maqueta__res--no', '✗'),
+      ]),
+      span('maqueta__leyenda', '✓ ganó el punto · ✗ falló: punto para la pareja rival'),
+    ]);
+  }
+
+  if (id === 'golpes') {
+    return caja('maqueta--golpes', [
+      span('maqueta__rotulo', 'Punto de Ana · ✓ Ganó'),
+      el('div', { clase: 'maqueta__grilla' }, [
+        ...ETIQUETAS_GOLPES.map((etiqueta) => span(etiqueta === 'Sin especificar' ? 'maqueta__golpe maqueta__golpe--pelota' : 'maqueta__golpe', etiqueta)),
+        span('maqueta__golpe maqueta__golpe--soltar', 'Descartar'),
+      ]),
+    ]);
+  }
+
+  if (id === 'editor') {
+    return caja('maqueta--editor', [
+      el('div', { clase: 'maqueta__fila' }, [span('maqueta__rotulo', 'Punto de'), span('maqueta__punto maqueta__punto--a', '40'), span('maqueta__op', '0'), span('maqueta__op', '15'), span('maqueta__op', '30'), span('maqueta__op', '✕')]),
+    ]);
+  }
+
+  return null;
 }
 
 // ---------------------------------------------------------------- avisos
