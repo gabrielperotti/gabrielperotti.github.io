@@ -9,14 +9,10 @@
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
-    <!-- Toda la app se dibuja acá desde ui.js. La orientación la resuelve el CSS con
-         `@media (orientation: ...)`: nada de JavaScript que adivine cómo se está sostiene
-         el teléfono, así que rotar no puede desincronizar nada. -->
+    <!-- Layout vertical único: rotar cambia el espacio disponible, no el estado. -->
     <div id="app" class="pantalla"></div>
 
-    <!-- El velo y la hoja de movimientos van aparte del armazón, con posición fija: la hoja
-         se dibuja arriba del marcador pero el velo arranca DEBAJO de él, así el marcador
-         nunca se atenúa. -->
+    <!-- Modal centrado en el viewport, fuera del armazón de la app. -->
     <div id="capa-modal" class="capa-modal" hidden></div>
 
     <!-- Avisos flotantes: copiado, errores. Viven fuera de las vistas para poder verse

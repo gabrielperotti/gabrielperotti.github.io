@@ -18,9 +18,11 @@ import {
   cerradoAMano,
   derivados,
   nombreDeEquipo,
+  parejaGanadora,
+  puedeAnularUltimoPunto,
   MODALIDADES,
 } from './motor.js';
-import { MOVIMIENTOS } from './movimientos.js';
+import { MOVIMIENTOS, etiquetaMovimiento } from './movimientos.js';
 import { generarResumen } from './resumen.js';
 
 export const ETIQUETAS_MODALIDAD = {
@@ -152,8 +154,8 @@ export function leerFormulario(formulario) {
     parejaA: { jugadores: [valor('jugadorA1'), valor('jugadorA2')] },
     parejaB: { jugadores: [valor('jugadorB1'), valor('jugadorB2')] },
     setsAElegir: numero('setsAElegir', 3),
-    modalidad: valor('modalidad') || 'ventaja',
-    parejaQueSacaElPrimero: valor('parejaQueSacaElPrimero') || 'A',
+    modalidad: valor('modalidad') || 'punto_oro',
+    parejaQueSacaElPrimero: valor('parejaQueSacaElPrimero'),
   };
 }
 
@@ -171,58 +173,75 @@ export function tituloDelPuntoPendiente(jugador, resultado) {
   return resultado === 'fallado' ? `Fallo de ${nombre}` : `Punto de ${nombre}`;
 }
 
-// Separación entre la hoja flotante y la ficha, y margen que la hoja se respeta con el borde
-// de la pantalla. No son ajustes: son los valores que dejan los botones separados de la ficha
-// y sin llegar al borde, sin tapar nada.
-const HOLGURA_HOJA = 8;
-const MARGEN_PANTALLA = 10;
+export function ordenarHistorial(partidos) {
+  return [...partidos].sort((a, b) => Date.parse(b.fechaFin) - Date.parse(a.fechaFin)
+    || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
+}
 
-// Dónde va la hoja de movimientos: ARRIBA de la ficha del jugador que se acaba de tocar y, si
-// arriba no entra, ABAJO de esa misma ficha. El ancla es la ficha, no la pantalla: la ficha
-// es el punto que la persona tiene bajo el dedo, así que la hoja se abre pegada a él.
-//
-// Devuelve `{ top, maxHeight, modo }`, o `null` cuando no entra en ninguno de los dos lados:
-// la señal de que hay que abrirla pegada al borde inferior, como antes. `null` también es lo
-// que devuelve cuando los datos no sirven para decidir (una ficha sin caja, un alto medido en
-// cero): antes no abrir el modal nunca es una opción, porque es el paso 3 de los 3 toques.
-//
-// Es pura a propósito: la regla del fallback se testea en Node, sin navegador. No mide nada
-// ni toca el DOM; recibe el rect de la ficha ya medido y el alto natural de la hoja. Ambos en
-// coordenadas de viewport: `.capa-modal` es `position: fixed; inset: 0`, así que ahí adentro
-// son las mismas coordenadas y no hay scroll que compensar.
-//
-// El ancho no se calcula: la hoja flotante sigue con `left: 0; right: 0`, o sea el ancho de
-// la pantalla menos los márgenes laterales. El anclaje es vertical; con 3 columnas de
-// botones de 54px, angostarla rompería los objetivos táctiles.
-export function posicionDeHoja({
-  ancla,
-  altoHoja,
-  altoVentana,
-  holgura = HOLGURA_HOJA,
-  margen = MARGEN_PANTALLA,
-}) {
-  // Una ficha sin caja (arrriba >= abajo) o un alto que no se midió bien: no hay posición que
-  // inventar, así que se cae al borde inferior.
-  if (ancla === null || ancla === undefined) return null;
-  if (!Number.isFinite(ancla.arriba) || !Number.isFinite(ancla.abajo)) return null;
-  if (ancla.abajo <= ancla.arriba) return null;
-  if (!Number.isFinite(altoHoja) || altoHoja <= 0) return null;
-  if (!Number.isFinite(altoVentana) || altoVentana <= 0) return null;
+export function datosDeRegistro(registro) {
+  const { partido } = registro;
+  const resultado = resultadoPartido(partido);
+  return {
+    fecha: new Date(registro.fechaFin).toLocaleString('es-AR'),
+    equipos: ['A', 'B'].map((letra) => nombreDeEquipo(partido, letra)),
+    resultado: `Sets ${resultado.A}-${resultado.B}`,
+    motivo: cerradoAMano(partido) ? 'Cerrado a mano · sin ganador definitivo' : 'Terminado por sets',
+    parciales: partido.marcador.sets.map((set, indice) => {
+      const tb = set.tieBreak === null ? '' : ` · TB ${set.tieBreak.A}-${set.tieBreak.B}`;
+      const puntos = set.juego === null || set.tieBreak !== null ? ''
+        : ` · Puntos ${etiquetaPunto(set, 'A')}-${etiquetaPunto(set, 'B')}`;
+      return `Set ${indice + 1}: ${etiquetaResultadoSet(set)}${tb}${set.juego === null ? '' : ' · inconcluso'}${puntos}`;
+    }),
+  };
+}
 
-  // Arriba: la holgura separa la hoja de la ficha, el margen la del borde de arriba. Si el
-  // alto natural entra en ese hueco, va arriba y no hay nada que recortar.
-  const espacioArriba = ancla.arriba - holgura - margen;
-  if (altoHoja <= espacioArriba) {
-    return { modo: 'arriba', top: ancla.arriba - holgura - altoHoja, maxHeight: espacioArriba };
+export function estadisticasDeRegistro(partido) {
+  const jugadoresDelPartido = ['A', 'B'].flatMap((pareja) => partido.parejas[pareja].jugadores);
+  // Conservar también contadores históricos de un ID que ya no figure entre los jugadores.
+  const ids = new Set(jugadoresDelPartido.map((jugador) => jugador.id));
+  const todos = [...jugadoresDelPartido, ...Object.keys(partido.estadisticas)
+    .filter((id) => !ids.has(id)).map((id) => ({ id, nombre: `Jugador ${id}` }))];
+  return todos.map((jugador) => {
+    const stats = Object.hasOwn(partido.estadisticas, jugador.id)
+      ? partido.estadisticas[jugador.id] : { winners: {}, fallos: {} };
+    const golpes = [...new Set([...Object.keys(stats.winners), ...Object.keys(stats.fallos)])].map((id) => {
+      const etiqueta = etiquetaMovimiento(id);
+      return {
+        id, etiqueta: etiqueta === 'Sin especificar' && id !== 'sin_especificar' ? id : etiqueta,
+        winners: Object.hasOwn(stats.winners, id) ? stats.winners[id] : 0,
+        fallos: Object.hasOwn(stats.fallos, id) ? stats.fallos[id] : 0,
+      };
+    });
+    return { nombre: jugador.nombre, golpes, sinGolpes: !golpes.some((golpe) => golpe.winners > 0 || golpe.fallos > 0) };
+  });
+}
+
+export function controlesBloqueados(estado) {
+  return estado.pendienteGuardado != null || estado.avisoFin === true;
+}
+
+export function anulacionDisponible(estado) {
+  return estado.pendienteGuardado == null && estado.conservacion !== 'eliminado'
+    && puedeAnularUltimoPunto(estado.partido, estado.ultimoPunto);
+}
+
+export function mensajeDeGanadores(partido) {
+  const ganadora = parejaGanadora(partido);
+  return ganadora === null ? null
+    : `¡Terminó! Ganaron ${partido.parejas[ganadora].jugadores.map((jugador) => jugador.nombre).join(' / ')}`;
+}
+
+export function mensajePersistencia(estado) {
+  if (estado.errorPersistencia === null || estado.errorPersistencia === undefined) {
+    if (estado.errorHistorial != null) return estado.reintentoHistorial?.tipo === 'eliminar'
+      ? 'No se pudo eliminar el partido del historial. Reintentá para completar la eliminación.'
+      : 'No se pudo leer el historial. Los datos guardados se conservan. Reintentá.';
+    return null;
   }
-
-  // Abajo: mismo criterio, del otro lado de la ficha.
-  const espacioAbajo = altoVentana - ancla.abajo - holgura - margen;
-  if (altoHoja <= espacioAbajo) {
-    return { modo: 'abajo', top: ancla.abajo + holgura, maxHeight: espacioAbajo };
-  }
-
-  return null;
+  const error = estado.errorPersistencia;
+  if (error.fase === 'limpieza') return 'El cambio del historial ya se guardó, pero no se pudo limpiar el partido activo. Reintentá antes de continuar.';
+  if (error.etapa === 'formato') return 'Hay datos guardados que no se pueden leer. No se borraron ni se reemplazaron. Reintentá cuando se resuelva el problema.';
+  return 'No se pudo completar la conservación del partido. Reintentá antes de continuar. Recargar puede perder cambios todavía no guardados.';
 }
 
 // ================================================================= DOM
@@ -254,6 +273,7 @@ function el(etiqueta, props = {}, hijos = []) {
 // del botón y no necesita variantes.
 const ICONO_COPIAR = '<rect x="9" y="3" width="11" height="17" rx="2.5"/><path d="M6 7H5a2 2 0 0 0-2 2v11a2 2 0 0 0 2 2h9a2 2 0 0 0 2-2v-1"/>';
 const ICONO_REINICIAR = '<path d="M3.5 12a8.5 8.5 0 1 0 2.6-6.1"/><path d="M3 4v5h5"/>';
+const ICONO_VOLVER = '<path d="m8 4-5 5 5 5"/><path d="M3 9h11a7 7 0 0 1 0 14"/>';
 const ICONO_CERRAR = '<path d="m6 6 12 12M18 6 6 18"/>';
 const ICONO_MAS = '<path d="M12 4.5v15M4.5 12h15"/>';
 const ICONO_RAQUETA = '<path d="M7 4.8v14.4L19 12z"/>';
@@ -290,7 +310,7 @@ export function conectarAcciones(lasAcciones) {
   acciones = lasAcciones;
 }
 
-// Arma el esqueleto una sola vez. Las tres vistas existen siempre y se muestran u ocultan:
+// Arma el esqueleto una sola vez. Las vistas existen siempre y se muestran u ocultan:
 // así los inputs de la creación conservan lo escrito al cambiar de vista, y nada se pierde
 // al rotar el teléfono (RF-41). No se recalcula nada acá: solo se construye la estructura.
 export function montar(contenedor, capaModal) {
@@ -305,17 +325,24 @@ export function montar(contenedor, capaModal) {
     }),
     partido: el('section', { clase: 'partido', 'aria-label': 'Marcador' }),
     fin: el('section', { clase: 'fin', 'aria-label': 'Resumen del partido' }),
+    historial: el('section', { clase: 'historial', 'aria-label': 'Historial de partidos' }),
+    detalle: el('section', { clase: 'historial', 'aria-label': 'Detalle del partido' }),
   };
 
   vistas.crear.append(construirCreacion());
   vistas.partido.append(construirMarcador(), construirCancha(), construirAccionesDePartido());
   vistas.fin.append(construirFin());
+  const avisoPersistencia = el('aside', { clase: 'conservacion', hidden: true });
+  const textoPersistencia = el('p');
+  avisoPersistencia.append(textoPersistencia, boton('Reintentar', () => acciones.reintentar()));
 
-  contenedor.replaceChildren(vistas.crear, vistas.partido, vistas.fin);
+  contenedor.replaceChildren(avisoPersistencia, ...Object.values(vistas));
 
   nodos = {
     vistas,
     capaModal,
+    avisoPersistencia,
+    textoPersistencia,
     botonEmpezar: vistas.crear.querySelector('.boton-principal'),
     // El marcador se muda entre la vista de partido y la de fin: hay que guardar el nodo.
     marcador: vistas.partido.querySelector('.marcador'),
@@ -336,7 +363,6 @@ export function montar(contenedor, capaModal) {
     sacaA: vistas.partido.querySelector('.eq__saca--a'),
     sacaB: vistas.partido.querySelector('.eq__saca--b'),
     pie: vistas.partido.querySelector('.marcador__pie'),
-    piePiso: vistas.partido.querySelector('.piso-info'),
     resumen: vistas.fin.querySelector('.resumen'),
     motivoFin: vistas.fin.querySelector('.fin__motivo'),
     marcadorFin: vistas.fin.querySelector('.fin__marcador'),
@@ -351,8 +377,7 @@ function construirCreacion() {
 
   contenedor.append(
     el('div', { clase: 'creacion__titulo' }, [
-      el('h1', { texto: 'Nuevo partido' }),
-      el('span', { clase: 'micro micro--fila', texto: 'Sin cuentas · sin internet' }),
+      el('h1', { texto: 'Padel Scores' }),
     ]),
     grupoPareja('A', 'Pareja A'),
     grupoPareja('B', 'Pareja B'),
@@ -363,6 +388,7 @@ function construirCreacion() {
         clase: 'btn--pelota btn--alto boton-principal',
         dibujo: ICONO_RAQUETA,
       }),
+      boton('Historial', () => acciones.abrirHistorial()),
     ]),
   );
 
@@ -410,7 +436,7 @@ function construirOpciones() {
       { valor: 'ventaja', texto: 'Ventaja', nota: 'deuce + ventaja' },
       { valor: 'punto_oro', texto: 'Punto de oro', nota: 'oro en el deuce' },
       { valor: 'star_point', texto: 'Star point', nota: 'punto único' },
-    ], 'ventaja', 3, 'opcion-set'),
+    ], 'punto_oro', 3, 'opcion-set'),
 
     bloqueSaque(),
   ]);
@@ -444,10 +470,10 @@ function bloqueOpciones(name, rotulo, pista, opciones, porDefecto, columnas, cla
 }
 
 function bloqueSaque() {
-  const oculto = el('input', { type: 'hidden', name: 'parejaQueSacaElPrimero', value: 'A' });
+  const oculto = el('input', { type: 'hidden', name: 'parejaQueSacaElPrimero', value: '' });
 
   const botones = ['A', 'B'].map((letra) => el('button', {
-    clase: `saca-btn saca-btn--${letra.toLowerCase()}${letra === 'A' ? ' saca-btn--elegida' : ''}`,
+    clase: `saca-btn saca-btn--${letra.toLowerCase()}`,
     type: 'button',
     datos: { valor: letra, name: 'parejaQueSacaElPrimero' },
     onclick: () => elegirSaque(letra),
@@ -462,7 +488,6 @@ function bloqueSaque() {
   return el('div', { clase: 'opciones__bloque' }, [
     el('div', { clase: 'opciones__rotulo' }, [
       el('span', { texto: 'Quién saca el primero' }),
-      el('span', { clase: 'opciones__pista', texto: 'después lo deduce solo' }),
     ]),
     oculto,
     el('div', { clase: 'segmento segmento--2' }, botones),
@@ -534,9 +559,7 @@ function construirMarcador() {
 
     // Fila 2: parciales y cuenta de sets, compitiendo entre ellos.
     //
-    // `sets` es hijo DIRECTO del marcador, no de `.marcador__parciales`: en horizontal el
-    // marcador es un riel de 5 columnas y la cuenta de sets ocupa su propia. Anidada, su
-    // `grid-area` no pertenece al grid del marcador y el riel queda con una columna vacía.
+    // `sets` es hijo directo del marcador y ocupa su propia área del grid.
     el('div', { clase: 'marcador__parciales' }, [
       el('span', { clase: 'micro', texto: 'Parciales' }),
       el('div', { clase: 'parciales' }),
@@ -561,9 +584,7 @@ function construirMarcador() {
 
     // Fila 4: los avisos (set point, match point, por qué terminó). El saque no va acá: la
     // pelota pegada al nombre de la pareja, en la fila 1, ya lo dice. Si no hay nada que
-    // avisar la fila se oculta, para no dejar un hueco en el marcador. En horizontal esta fila
-    // no entra en el marcador: los avisos bajan al piso de la cancha (`.piso-info`), que ahí
-    // sobra a los lados.
+    // avisar la fila se oculta, para no dejar un hueco en el marcador.
     el('div', { clase: 'marcador__pie' }),
   ]);
 }
@@ -581,9 +602,7 @@ function puntoDePareja(pareja) {
 
 function construirCancha() {
   // La cancha es un dibujo: fondo, líneas, eje y red. Las fichas de los jugadores se
-  // apoyan encima, como fichas sobre un dibujo, y van DENTRO de la tabla: en horizontal la
-  // tabla es un 2:1 centrado y las fichas tienen que apoyarse en sus bordes, dejando el
-  // piso oscuro de los costados libre para el saque y los avisos.
+  // apoyan encima, dentro de la tabla, con una pareja arriba y otra abajo de la red.
   return el('main', { clase: 'cancha' }, [
     el('div', { clase: 'cancha__tabla' }, [
       el('div', { clase: 'cancha__borde' }),
@@ -595,9 +614,6 @@ function construirCancha() {
         grupoFichas('abajo', 'B', 3),
       ]),
     ]),
-    // Los avisos, en el piso. Es el mismo texto que en vertical vive en el pie del marcador;
-    // la orientación muestra uno u otro.
-    el('div', { clase: 'piso-info' }),
   ]);
 }
 
@@ -615,7 +631,6 @@ function construirFicha(puesto, letra, lateral) {
     type: 'button',
     onclick: () => acciones.tocarJugador(puesto),
   }, [
-    el('span', { clase: 'ficha__mono' }),
     el('span', { clase: 'ficha__nombre' }),
   ]);
 
@@ -643,16 +658,17 @@ function construirFicha(puesto, letra, lateral) {
     datos: { puesto: String(puesto) },
   }, [nombre, accionesDeFicha]);
 
-  jugadores.set(puesto, { ficha, nombre, mono: nombre.querySelector('.ficha__mono'), texto: nombre.querySelector('.ficha__nombre') });
+  jugadores.set(puesto, { ficha, nombre, texto: nombre.querySelector('.ficha__nombre') });
   return ficha;
 }
 
 // La barra del partido no tiene "Copiar": el resumen solo se copia con el partido terminado
 // (pantalla de fin), así que acá el botón no llevaría a ninguna parte.
 function construirAccionesDePartido() {
-  return el('nav', { clase: 'acciones' }, [
-    boton('Reiniciar', () => acciones.reiniciar(), { dibujo: ICONO_REINICIAR }),
+  return el('nav', { clase: 'acciones acciones--partido' }, [
+    boton('Anular último punto', () => acciones.anularUltimoPunto(), { clase: 'btn--anular', dibujo: ICONO_VOLVER }),
     boton('Cerrar', () => acciones.cerrar(), { clase: 'btn--peligro', dibujo: ICONO_CERRAR }),
+    boton('Historial', () => acciones.abrirHistorial()),
   ]);
 }
 
@@ -661,9 +677,7 @@ function construirFin() {
     el('div', { clase: 'fin__titulo' }, [
       el('span', { clase: 'fin__trofeo', svg: icono(ICONO_TROFEO) }),
       el('h2', { texto: '¡Se terminó!' }),
-      // Por QUÉ terminó, no quién ganó: el motor no exporta el ganador del partido y la
-      // UI no puede comparando los sets para deducirlo (constitución 2). El resultado se
-      // lee de las cajas de sets, que ya vienen con el color de cada pareja.
+      // El resumen habitual conserva el motivo del cierre.
       el('span', { clase: 'fin__motivo' }),
     ]),
 
@@ -678,6 +692,7 @@ function construirFin() {
           boton('Reiniciar', () => acciones.reiniciar(), { dibujo: ICONO_REINICIAR }),
           boton('Empezar otro', () => acciones.empezarOtro(), { clase: 'btn--peligro', dibujo: ICONO_MAS }),
         ]),
+        boton('Historial', () => acciones.abrirHistorial()),
       ]),
     ]),
 
@@ -697,13 +712,13 @@ function construirFin() {
 // marcado. Lo usa "Empezar otro": si sólo se vacía el input hidden, los botones siguen
 // mostrando la elección anterior y el formulario miente.
 export function reiniciarOpciones() {
-  const porDefecto = { setsAElegir: '3', modalidad: 'ventaja', parejaQueSacaElPrimero: 'A' };
+  const porDefecto = { setsAElegir: '3', modalidad: 'punto_oro', parejaQueSacaElPrimero: '' };
 
   for (const [name, valor] of Object.entries(porDefecto)) {
     const oculto = document.querySelector(`input[type="hidden"][name="${name}"]`);
     if (oculto !== null) oculto.value = valor;
-    marcarElegido(document.querySelectorAll(`[data-name="${name}"]`), valor, 'opcion-set');
-    marcarElegido(document.querySelectorAll(`[data-name="${name}"]`), valor, 'saca-btn');
+    const claseBoton = name === 'parejaQueSacaElPrimero' ? 'saca-btn' : 'opcion-set';
+    marcarElegido(document.querySelectorAll(`[data-name="${name}"]`), valor, claseBoton);
   }
   actualizarNombresDeSaque();
 }
@@ -712,7 +727,10 @@ export function reiniciarOpciones() {
 // así que nunca hay dos marcadores desincronizados.
 export function mudarMarcadorA(destino) {
   const casa = destino === 'fin' ? nodos.marcadorFin : nodos.vistas.partido;
-  if (nodos.marcador.parentElement !== casa) casa.append(nodos.marcador);
+  if (nodos.marcador.parentElement !== casa) {
+    if (destino === 'fin') casa.append(nodos.marcador);
+    else casa.prepend(nodos.marcador);
+  }
 }
 
 // ---------------------------------------------------------------- render
@@ -720,12 +738,20 @@ export function mudarMarcadorA(destino) {
 export function render(estado) {
   const vista = estado.vista;
 
-  nodos.vistas.crear.hidden = vista !== 'crear';
-  nodos.vistas.partido.hidden = vista !== 'partido';
-  nodos.vistas.fin.hidden = vista !== 'fin';
+  for (const [nombre, nodo] of Object.entries(nodos.vistas)) nodo.hidden = vista !== nombre;
+  const mensaje = mensajePersistencia(estado);
+  nodos.avisoPersistencia.hidden = mensaje === null;
+  nodos.textoPersistencia.textContent = mensaje ?? '';
+  for (const nodo of Object.values(nodos.vistas)) nodo.inert = estado.avisoFin === true;
+  if (estado.avisoFin) mostrarModalFin(estado);
+
+  if (vista === 'historial' || vista === 'detalle') {
+    dibujarHistorial(estado);
+    return;
+  }
 
   if (vista === 'crear') {
-    actualizarPantallaCreacion();
+    actualizarPantallaCreacion(estado);
     actualizarNombresDeSaque();
     return;
   }
@@ -737,11 +763,19 @@ export function render(estado) {
   dibujarEditor(estado);
   dibujarCancha(estado);
   dibujarResumen(estado);
+  for (const vistaDeAcciones of [nodos.vistas.partido, nodos.vistas.fin]) {
+    for (const nodo of vistaDeAcciones.querySelectorAll('.acciones button')) {
+      nodo.disabled = controlesBloqueados(estado) && !['Historial', 'Copiar resumen'].includes(nodo.textContent.trim());
+      if (nodo.classList.contains('btn--anular')) {
+        nodo.disabled = !anulacionDisponible(estado) || estado.avisoFin === true;
+      }
+    }
+  }
 }
 
-function actualizarPantallaCreacion() {
+function actualizarPantallaCreacion(estado) {
   const completo = formularioCompleto(leerFormulario(nodos.vistas.crear));
-  nodos.botonEmpezar.disabled = !completo;
+  nodos.botonEmpezar.disabled = !completo || controlesBloqueados(estado);
 }
 
 function dibujarCuentas(partido) {
@@ -757,7 +791,7 @@ function dibujarCuentas(partido) {
 
 function dibujarParciales(estado) {
   const { partido } = estado;
-  const editable = sePuedeEditarJuegos(partido);
+  const editable = !controlesBloqueados(estado) && estado.conservacion !== 'eliminado' && sePuedeEditarJuegos(partido);
 
   // Sólo se dibujan los sets que `indicesDeSetsVisibles` deja ver: en la vista de partido, el
   // set en curso; en la de fin, todos.
@@ -787,7 +821,7 @@ function dibujarParciales(estado) {
 function dibujarPuntos(estado) {
   const { partido } = estado;
   const set = setEnCurso(partido);
-  const editable = sePuedeRegistrarPunto(partido);
+  const editable = !controlesBloqueados(estado) && estado.conservacion !== 'eliminado' && sePuedeRegistrarPunto(partido);
 
   nodos.puntos.vs.textContent = enTieBreak(partido) ? 'TB' : 'punto';
 
@@ -814,18 +848,11 @@ function dibujarPie(estado) {
   const mensaje = mensajeDeEstado(partido);
   if (mensaje !== null) partes.push(el('span', { clase: 'chip-alerta', texto: mensaje }));
 
-  // El mismo texto en los dos lugares donde puede verse. Se escriben juntos, en la misma
-  // pasada: no hay forma de que uno quede viejo.
-  //
   // Sin avisos no queda nada que decir ahí, y la fila se oculta: una fila vacía igual ocupa
   // alto en el marcador y le roba lugar a la cancha. El saque no vive más en este lugar: la
   // pelota pegada al nombre de la pareja, en la fila 1, ya lo dice.
-  const pintar = (destino) => {
-    destino.replaceChildren(...partes.map((parte) => parte.cloneNode(true)));
-    destino.hidden = partes.length === 0;
-  };
-  pintar(nodos.pie);
-  pintar(nodos.piePiso);
+  nodos.pie.replaceChildren(...partes);
+  nodos.pie.hidden = partes.length === 0;
 }
 
 function dibujarEditor(estado) {
@@ -839,8 +866,7 @@ function dibujarEditor(estado) {
   // El dato que se está editando se levanta: sin esto no se sabe de quién es el número.
   for (const pareja of ['A', 'B']) nodos.puntos[pareja].classList.remove('punto--activo');
 
-  nodos.marcador.classList.remove('marcador--editando');
-  if (editor === null) {
+  if (editor === null || controlesBloqueados(estado) || estado.conservacion === 'eliminado') {
     destino.hidden = true;
     destino.replaceChildren();
     return;
@@ -851,9 +877,6 @@ function dibujarEditor(estado) {
   if (editor.tipo !== 'juegos') nodos.puntos[editor.pareja].classList.add('punto--activo');
 
   destino.hidden = false;
-  // En horizontal el editor ocupa la columna de los parciales, así que hay que avisarle al
-  // marcador para que los oculte mientras dura la edición.
-  nodos.marcador.classList.add('marcador--editando');
 
   // Si solo quedaba el valor actual, no hay nada que ofrecer y la fila se cierra (T47).
   const vacio = valores.length === 0;
@@ -889,9 +912,7 @@ function dibujarEditor(estado) {
 
 // Qué se está editando, en palabras. Sólo el rótulo: el valor es el que ya muestra el dato.
 //
-// El número de set va acá porque en horizontal los parciales se ocultan mientras se edita
-// (el editor toma su columna en el riel), así que sin esto "Juego de / 6" no diría de qué
-// set habla. Es el índice del set que se está tocando, no una regla.
+// El número de set identifica el parcial que se está tocando; no es una regla.
 function rotuloDelEditor(estado) {
   const { partido, editor } = estado;
   if (editor.tipo === 'juegos') return 'Juego del set ' + (editor.indiceSet + 1);
@@ -919,17 +940,15 @@ function editorAbierto(estado) {
 
 function dibujarCancha(estado) {
   const { partido } = estado;
-  const puede = sePuedeRegistrarPunto(partido);
+  const puede = !controlesBloqueados(estado) && estado.conservacion !== 'eliminado' && sePuedeRegistrarPunto(partido);
   const elegido = estado.jugadorSeleccionado;
 
   for (const puesto of [1, 2, 3, 4]) {
-    const { ficha, nombre, mono, texto } = jugadores.get(puesto);
+    const { ficha, nombre, texto } = jugadores.get(puesto);
     const jugador = jugadorPorPuesto(partido, puesto);
     const textoNombre = jugador?.nombre ?? '';
 
     texto.textContent = textoNombre;
-    // El monograma es la inicial: sin contexto, un nombre largo se lee entero abajo.
-    mono.textContent = inicialDe(textoNombre);
 
     // Los nombres largos bajan un escalón de tamaño en vez de cortarse con puntos
     // suspensivos: en la cancha se lee al jugador de frente.
@@ -949,15 +968,79 @@ function dibujarCancha(estado) {
   if (fichas !== null) fichas.classList.toggle('fichas--con-foco', elegido !== null && puede);
 }
 
-// La inicial del monograma: con acentos y todo. No es una regla de pádel, es pintar texto.
-function inicialDe(nombre) {
-  const limpio = String(nombre).trim();
-  return limpio === '' ? '' : [...limpio][0].toUpperCase();
+function dibujarResumen(estado) {
+  nodos.resumen.textContent = estado.avisoFin ? '' : generarResumen(estado.partido);
+  nodos.motivoFin.textContent = mensajeDeEstado(estado.partido) ?? 'Fin del partido';
+  nodos.motivoFin.classList.toggle('fin__motivo--eliminado', estado.conservacion === 'eliminado');
+  if (estado.conservacion === 'eliminado') nodos.motivoFin.textContent += ' · eliminado del historial, sin edición';
 }
 
-function dibujarResumen(estado) {
-  nodos.resumen.textContent = generarResumen(estado.partido);
-  nodos.motivoFin.textContent = mensajeDeEstado(estado.partido) ?? 'Fin del partido';
+function tarjetaRegistro(registro) {
+  const datos = datosDeRegistro(registro);
+  return el('article', { clase: 'historico' }, [
+    el('time', { datetime: registro.fechaFin, texto: datos.fecha }),
+    ...datos.equipos.map((nombre, indice) => el('p', { clase: indice === 0 ? 'equipo-a' : 'equipo-b', texto: nombre })),
+    el('h3', { texto: datos.resultado }),
+    el('p', { clase: 'historico__motivo', texto: datos.motivo }),
+    ...datos.parciales.map((parcial) => el('p', { texto: parcial })),
+  ]);
+}
+
+function botonEliminar(registro, estado) {
+  const nodo = boton('Eliminar', () => acciones.eliminarTerminado(registro.id), { clase: 'btn--peligro' });
+  nodo.disabled = controlesBloqueados(estado) || estado.reintentoHistorial != null;
+  return nodo;
+}
+
+function dibujarHistorial(estado) {
+  const detalle = estado.vista === 'detalle';
+  const destino = nodos.vistas[estado.vista];
+  const encabezado = el('header', { clase: 'historial__cab' }, [
+    el('h2', { texto: detalle ? 'Detalle del partido' : 'Historial' }),
+    boton(detalle ? 'Volver a la lista' : 'Volver', () => detalle ? acciones.abrirHistorial() : acciones.volverDeHistorial()),
+  ]);
+  const contenido = [encabezado, el('p', { clase: 'historial__nota', texto: 'Se guarda solo en este navegador y dispositivo. Si borrás los datos del navegador, podés perder el historial.' })];
+  if (estado.errorHistorial != null) {
+    contenido.push(el('aside', { clase: 'conservacion' }, [
+      el('p', { texto: estado.reintentoHistorial?.tipo === 'eliminar'
+        ? 'No se pudo eliminar el partido. No se confirmó la eliminación; reintentá.'
+        : 'No se pudo leer el historial. Los datos guardados no se borraron ni se reemplazaron.' }),
+      boton('Reintentar', () => acciones.reintentarHistorial()),
+    ]));
+  } else if (detalle) {
+    const registro = estado.registroSeleccionado;
+    if (registro == null) contenido.push(el('p', { texto: 'Este partido ya no está en el historial.' }));
+    else {
+      const tarjeta = tarjetaRegistro(registro);
+      tarjeta.append(botonEliminar(registro, estado));
+      contenido.push(tarjeta, el('h3', { texto: 'Estadísticas por jugador' }));
+      for (const jugador of estadisticasDeRegistro(registro.partido)) {
+        const seccion = el('section', { clase: 'historico' }, [el('h3', { texto: jugador.nombre })]);
+        if (jugador.sinGolpes) seccion.append(el('p', { texto: 'Sin golpes registrados' }));
+        if (jugador.golpes.length > 0) {
+          const tabla = el('table', { clase: 'historico__stats' }, [
+            el('thead', {}, [el('tr', {}, ['Golpe', 'Winners', 'Fallos'].map((texto) => el('th', { texto }))) ]),
+            el('tbody', {}, jugador.golpes.map((golpe) => el('tr', {}, [
+              el('th', { texto: golpe.etiqueta }), el('td', { texto: String(golpe.winners) }), el('td', { texto: String(golpe.fallos) }),
+            ]))),
+          ]);
+          seccion.append(tabla);
+        }
+        contenido.push(seccion);
+      }
+    }
+  } else {
+    const partidos = estado.historial?.estado === 'ok' ? estado.historial.partidos : [];
+    if (partidos.length === 0) contenido.push(el('p', { texto: 'Todavía no hay partidos terminados.' }));
+    for (const registro of ordenarHistorial(partidos)) {
+      const tarjeta = tarjetaRegistro(registro);
+      tarjeta.append(el('nav', { clase: 'acciones' }, [
+        boton('Ver detalle', () => acciones.verDetalle(registro.id)), botonEliminar(registro, estado),
+      ]));
+      contenido.push(tarjeta);
+    }
+  }
+  destino.replaceChildren(...contenido);
 }
 
 // ---------------------------------------------------------------- avisos
@@ -978,15 +1061,28 @@ export function mostrarAviso(texto, esError = false) {
 
 // ---------------------------------------------------------------- modal
 
-// Hoja de movimientos. Se ancla ARRIBA de la ficha del jugador que se acaba de tocar y, si no
-// entra arriba, ABAJO de esa ficha: el ancla es la ficha, porque es el punto de la pantalla
-// que la persona tiene bajo el dedo. La regla la decide `posicionDeHoja` y la pinta la
-// variante `.hoja--flotante`.
-//
-// Cuando no entra en ninguno de los dos lados —típicamente en horizontal, donde la pantalla
-// es baja y los ~250px de la hoja no entran ni arriba ni abajo— se cae a la hoja pegada al
-// borde inferior de siempre. Es preferible una hoja sin ancla a no tener modal: este es el
-// paso 3 de los 3 toques y no puede fallar.
+function mostrarModalFin(estado) {
+  const avanzar = boton('Avanzar', () => acciones.avanzar(), { clase: 'btn--pelota' });
+  avanzar.disabled = estado.pendienteGuardado != null;
+  const anular = boton('Anular último punto', () => acciones.anularUltimoPunto(), { clase: 'btn--anular', dibujo: ICONO_VOLVER });
+  anular.disabled = !anulacionDisponible(estado);
+  const mensaje = mensajePersistencia(estado);
+  const conservacion = mensaje === null ? null : el('aside', { clase: 'conservacion' }, [
+    el('p', { texto: mensaje }),
+    boton('Reintentar', () => acciones.reintentar()),
+  ]);
+  const hoja = el('div', { clase: 'hoja hoja--fin', role: 'dialog', 'aria-modal': 'true' }, [
+    el('h2', { clase: 'aviso-fin__titulo', texto: mensajeDeGanadores(estado.partido) }),
+    conservacion,
+    el('nav', { clase: 'aviso-fin__acciones' }, [avanzar, anular]),
+  ]);
+  // Sin descarte ni cierre al tocar el fondo: solo Avanzar o Anular resuelven el aviso.
+  nodos.capaModal.onclick = null;
+  nodos.capaModal.replaceChildren(el('div', { clase: 'velo velo--fin' }), hoja);
+  nodos.capaModal.hidden = false;
+}
+
+// Hoja de movimientos centrada por CSS, sin depender de la ficha ni de mediciones.
 export function mostrarModalMovimientos(pendiente, alElegir, alDescartar) {
   const cerrar = () => {
     nodos.capaModal.hidden = true;
@@ -1008,7 +1104,6 @@ export function mostrarModalMovimientos(pendiente, alElegir, alDescartar) {
   }));
 
   const hojas = [
-    el('div', { clase: 'hoja__agarre' }),
     el('div', { clase: 'hoja__titulo' }, [
       el('span', { clase: 'hoja__jugador', svg: '' }),
       el('span', { clase: `hoja__resultado hoja__resultado--${pendiente.resultado === 'ganado' ? 'verde' : 'rojo'}` }, [
@@ -1021,7 +1116,7 @@ export function mostrarModalMovimientos(pendiente, alElegir, alDescartar) {
     ]),
   ];
 
-  const titulo = hojas[1].querySelector('.hoja__jugador');
+  const titulo = hojas[0].querySelector('.hoja__jugador');
   titulo.append('Punto de ', el('em', { texto: pendiente.jugador?.nombre ?? '' }));
 
   nodos.capaModal.onclick = (evento) => {
@@ -1032,58 +1127,6 @@ export function mostrarModalMovimientos(pendiente, alElegir, alDescartar) {
   nodos.capaModal.replaceChildren(el('div', { clase: 'velo' }), hoja);
   nodos.capaModal.hidden = false;
 
-  anclarHojaEnFicha(hoja, pendiente.puesto);
-}
-
-// Ancla la hoja a la ficha del jugador que se acaba de tocar. Mide, decide con
-// `posicionDeHoja` y aplica: si la regla dice que no entra en ningún lado, saca la variante
-// flotante y la hoja queda pegada al borde inferior, como antes.
-//
-// Se mide con la hoja YA en la capa y con `visibility: hidden`: `visibility: hidden` sí
-// calcula el layout, así que el alto que sale es el alto natural de verdad (3 filas de
-// botones de 54px), y el ancho es el mismo que va a tener después. Medir con `display: none`
-// daría cero. Y se hace en el mismo turno que `capaModal.hidden = false`, sin esperas ni
-// pedidos de animación en el medio: el navegador no llega a pintar la posición intermedia,
-// así que no hay parpadeo.
-//
-// Si no hay ficha —no vino `puesto`, o el puesto no está en el mapa— no se toca nada: el
-// modal se abre igual, en el borde inferior.
-function anclarHojaEnFicha(hoja, puesto) {
-  const ficha = jugadores.get(puesto)?.ficha;
-  if (ficha === undefined) return;
-
-  hoja.classList.add('hoja--flotante');
-  hoja.style.visibility = 'hidden';
-
-  const caja = ficha.getBoundingClientRect();
-  const posicion = posicionDeHoja({
-    ancla: { arriba: caja.top, abajo: caja.bottom },
-    altoHoja: hoja.getBoundingClientRect().height,
-    // El alto sale de la CAJA de la capa, no de `window.innerHeight`. La hoja es `position:
-    // absolute` dentro de `.capa-modal`, así que el bloque contenedor es la capa: el borde
-    // contra el que hay que prometer que no nos pasamos es el de la capa. `innerHeight` mide
-    // otra cosa —el viewport visual, que en iOS cambia con la barra de URL— y difiere en los
-    // ~60-100px de la barra, casi diez márgenes: con esa diferencia la hoja puede pasarse del
-    // borde, o disparar el fallback en un caso donde sí entraba.
-    //
-    // `getBoundingClientRect()` y no `clientHeight`: el rect es fraccionario y es el mismo
-    // sistema de coordenadas que el `caja.top` / `caja.bottom` de la ficha, que también viene
-    // de un `getBoundingClientRect`. Con `clientHeight` se restarían enteros contra
-    // fraccionarios en la misma cuenta. Si la capa midiera 0, `posicionDeHoja` ya devuelve
-    // `null` y la hoja va al borde inferior: no hace falta ninguna guarda extra acá.
-    altoVentana: nodos.capaModal.getBoundingClientRect().height,
-  });
-
-  if (posicion === null) {
-    hoja.classList.remove('hoja--flotante');
-  } else {
-    // Las dos medidas llegan por variables de CSS y no como estilos sueltos: la geometría
-    // de la variante flotante queda declarada en `styles.css`, y la JS pasa números.
-    hoja.style.setProperty('--top', `${posicion.top}px`);
-    hoja.style.setProperty('--alto-max', `${posicion.maxHeight}px`);
-  }
-
-  hoja.style.visibility = '';
 }
 
 export function ocultarModal() {

@@ -509,6 +509,34 @@ function otraPareja(pareja) {
 
 // ---------------------------------------------------------------- puntos
 
+// Snapshot temporal separado del partido. No congela ni comparte datos con el activo.
+export function capturarAntesDelPunto(partido) {
+  if (!puedeEditarPuntos(partido)) return null;
+  return congelarProfundamente(copiaProfunda(partido));
+}
+
+function congelarProfundamente(datos) {
+  if (datos !== null && typeof datos === 'object') {
+    for (const valor of Object.values(datos)) congelarProfundamente(valor);
+    Object.freeze(datos);
+  }
+  return datos;
+}
+
+// App conserva un único token { antes, despues }, solo tras una carga que cambió el
+// partido. Lo invalida en otras mutaciones y lo consume antes de guardar la anulación.
+export function puedeAnularUltimoPunto(partido, token) {
+  return token?.antes != null && token.despues === partido
+    && token.antes !== partido && puedeEditarPuntos(token.antes);
+}
+
+// No re-derivar: la copia anterior ya contiene fases, ciclos, saque y estadísticas.
+// El motor no consume ni conserva tokens; sin token vigente devuelve el mismo objeto.
+export function anularUltimoPunto(partido, token) {
+  if (!puedeAnularUltimoPunto(partido, token)) return partido;
+  return copiaProfunda(token.antes);
+}
+
 // Decide a favor de quién es el punto, avanza la fase y suma al winner o al fallo.
 // El fallo del jugador es punto de la pareja rival (RF-28, RF-29).
 export function scorePoint(partido, pareja, { jugadorId, resultado, movimientoId }) {
@@ -740,6 +768,15 @@ export function resultadoPartido(partido) {
     B: setsGanados(partido.marcador, 'B'),
     terminado: estaTerminado(partido),
   };
+}
+
+// Un cierre manual no declara ganador, aunque haya sets cerrados a favor de alguien.
+export function parejaGanadora(partido) {
+  if (!estaTerminado(partido) || partido.motivoFin !== MOTIVO_FIN_SETS) return null;
+  for (const pareja of ['A', 'B']) {
+    if (setsGanados(partido.marcador, pareja) >= partido.config.setsParaGanar) return pareja;
+  }
+  return null;
 }
 
 export function setsGanados(marcador, pareja) {

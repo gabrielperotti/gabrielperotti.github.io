@@ -7,6 +7,9 @@
 import {
   crearPartido,
   scorePoint,
+  capturarAntesDelPunto,
+  puedeAnularUltimoPunto as tokenEsAnulable,
+  anularUltimoPunto,
   editarPuntos,
   editarPuntoDeTieBreak,
   editarJuegos,
@@ -16,10 +19,12 @@ import {
   setEnCurso,
 } from './motor.js';
 import { crearAlmacen } from './estado.js';
+import { crearCiclo } from './ciclo-partido.js';
 import { generarResumen } from './resumen.js';
 import * as ui from './ui.js';
 
 const almacen = crearAlmacen();
+const ciclo = crearCiclo({ almacen });
 
 // Estado de la UI. `partido` es la única fuente de verdad del marcador.
 let estado = {
@@ -28,6 +33,18 @@ let estado = {
   jugadorSeleccionado: null,
   pendiente: null,
   editor: null,
+  seguimiento: null,
+  conservacion: 'activo',
+  pendienteGuardado: null,
+  errorPersistencia: null,
+  vistaRetorno: 'crear',
+  historial: { estado: 'ausente' },
+  registroId: null,
+  registroSeleccionado: null,
+  errorHistorial: null,
+  reintentoHistorial: null,
+  ultimoPunto: null,
+  avisoFin: false,
 };
 
 // ================================================================= acciones
@@ -36,20 +53,32 @@ const acciones = {
   // ---------------------------------------------------------------- creación
 
   empezar() {
+    if (!puedeCambiar()) return;
     const datos = ui.leerFormulario(document.querySelector('.creacion'));
     if (!ui.formularioCompleto(datos)) return;
+    if (!['A', 'B'].includes(datos.parejaQueSacaElPrimero)) {
+      ui.mostrarAviso('Elegí qué pareja saca el primero.', true);
+      return;
+    }
 
     // No hay dos partidos en paralelo: uno nuevo es empezar de cero (RF-9).
-    estado.partido = crearPartido(datos);
+    descartarAnulacion();
+    if (!recibir(ciclo.iniciar(sesionActual(), crearPartido(datos)))) {
+      dibujar();
+      return;
+    }
     estado.vista = 'partido';
     limpiarTodo();
-    persistir();
     dibujar();
   },
 
   empezarOtro() {
-    almacen.limpiar();
-    estado.partido = null;
+    if (!puedeCambiar()) return;
+    descartarAnulacion();
+    if (!recibir(ciclo.liberar(sesionActual()))) {
+      dibujar();
+      return;
+    }
     estado.vista = 'crear';
     limpiarTodo();
     ui.mudarMarcadorA('partido');
@@ -60,6 +89,7 @@ const acciones = {
   // ---------------------------------------------------------------- 3 toques
 
   tocarJugador(puesto) {
+    if (!puedeCambiar({ editar: true })) return;
     if (estado.partido === null) return;
     // Con el partido terminado, tocar un jugador no muestra los botones (CE-15).
     if (!ui.sePuedeRegistrarPunto(estado.partido)) return;
@@ -73,6 +103,7 @@ const acciones = {
   },
 
   elegirResultado(puesto, resultado) {
+    if (!puedeCambiar({ editar: true })) return;
     if (estado.partido === null) return;
     if (!ui.sePuedeRegistrarPunto(estado.partido)) return;
 
@@ -80,10 +111,7 @@ const acciones = {
     if (jugador === null) return;
 
     // El punto todavía no existe: recién se registra cuando se elige el movimiento (RF-31).
-    // El `puesto` viaja con el pendiente sólo para que la UI ubique la ficha del jugador y
-    // ancle el modal arriba de ella: `pendiente` no se persiste, así que no ensucia el estado
-    // guardado.
-    estado.pendiente = { jugador, pareja: puesto <= 2 ? 'A' : 'B', resultado, puesto };
+    estado.pendiente = { jugador, pareja: puesto <= 2 ? 'A' : 'B', resultado };
     dibujar();
 
     ui.mostrarModalMovimientos(
@@ -95,7 +123,18 @@ const acciones = {
 
   // ---------------------------------------------------------------- edición
 
+  anularUltimoPunto() {
+    if (!puedeCambiar({ editar: true, desdeAviso: true }) || !puedeAnularUltimoPunto()) return;
+    const anterior = anularUltimoPunto(estado.partido, estado.ultimoPunto);
+    // Consumir antes de conservar: un error deja el candidato en el ciclo, no otro undo.
+    descartarAnulacion();
+    limpiarTodo();
+    aplicar(anterior);
+    volverAlPartido();
+  },
+
   tocarPunto(pareja) {
+    if (!puedeCambiar({ editar: true })) return;
     if (estado.partido === null) return;
     if (setEnCurso(estado.partido) === null) return;
 
@@ -114,6 +153,7 @@ const acciones = {
   },
 
   tocarJuegos(indiceSet, pareja) {
+    if (!puedeCambiar({ editar: true })) return;
     const { partido } = estado;
     if (partido === null) return;
     if (!ui.sePuedeEditarJuegos(partido)) return;
@@ -130,8 +170,10 @@ const acciones = {
   },
 
   aplicarValor(editor, valor) {
+    if (!puedeCambiar({ editar: true }) || estado.partido === null) return;
     const { partido } = estado;
     estado.editor = null;
+    descartarAnulacion();
 
     if (editor.tipo === 'juegos') {
       aplicar(editarJuegos(partido, editor.indiceSet, editor.pareja, valor));
@@ -148,18 +190,33 @@ const acciones = {
 
   // ---------------------------------------------------------------- fin
 
+  avanzar() {
+    if (!estado.avisoFin || !puedeCambiar({ desdeAviso: true })) return;
+    descartarAnulacion();
+    mostrarFin();
+  },
+
   reiniciar() {
+    if (!puedeCambiar()) return;
     if (estado.partido === null) return;
     if (!confirmar('¿Reiniciar el partido? Se borran el marcador y las estadísticas.')) return;
+    descartarAnulacion();
 
     // Conserva configuración y nombres, vuelve marcador y estadísticas a cero (RF-66).
     estado.jugadorSeleccionado = null;
-    aplicar(reiniciar(estado.partido));
+    const resultado = ciclo.iniciar(sesionActual(), reiniciar(estado.partido));
+    recibir(resultado);
+    if (resultado.estado === 'ok') {
+      limpiarTodo();
+      volverAlPartido();
+    } else dibujar();
   },
 
   cerrar() {
+    if (!puedeCambiar({ editar: true })) return;
     if (estado.partido === null) return;
     if (!confirmar('¿Cerrar el partido? Es definitivo: solo reiniciar permite volver a empezar.')) return;
+    descartarAnulacion();
 
     aplicar(cerrar(estado.partido));
     // Cerrar a mano deja el resumen en pantalla hasta elegir "Empezar otro" (RF-82).
@@ -170,21 +227,124 @@ const acciones = {
     if (estado.partido === null) return;
     copiarResumen(estado.partido);
   },
+
+  reintentar() {
+    if (estado.pendienteGuardado === null && estado.errorHistorial !== null) {
+      acciones.reintentarHistorial();
+      return;
+    }
+    const historica = ['historial', 'detalle'].includes(estado.vista);
+    const eliminando = estado.seguimiento?.operacion === 'eliminar';
+    const liberando = estado.pendienteGuardado?.tipo === 'liberar';
+    const resultado = ciclo.reintentar(sesionActual());
+    recibir(resultado);
+    if (liberando && resultado.estado === 'ok') reiniciarFormulario();
+    limpiarTodo();
+    if (historica) {
+      estado.vistaRetorno = estado.partido === null ? 'crear' : estaTerminado(estado.partido) ? 'fin' : 'partido';
+      if (eliminando && resultado.estado === 'ok') estado.vista = 'historial';
+      leerHistorial();
+      dibujar();
+    } else sincronizarVista();
+  },
+
+  eliminarTerminado(id) {
+    if (!puedeCambiar() || estado.reintentoHistorial !== null) return;
+    if (!confirmar('¿Eliminar este partido del historial? No se puede recuperar.')) return;
+    return eliminarConfirmado(id);
+  },
+
+  abrirHistorial() {
+    if (estado.avisoFin) return;
+    if (!['historial', 'detalle'].includes(estado.vista)) estado.vistaRetorno = estado.vista;
+    limpiarTodo();
+    estado.vista = 'historial';
+    estado.registroId = null;
+    estado.registroSeleccionado = null;
+    leerHistorial();
+    dibujar();
+  },
+
+  verDetalle(id) {
+    if (estado.avisoFin) return;
+    limpiarTodo();
+    estado.vista = 'detalle';
+    estado.registroId = id;
+    leerHistorial();
+    dibujar();
+  },
+
+  volverDeHistorial() {
+    limpiarTodo();
+    estado.vista = estado.vistaRetorno;
+    if (estado.partido !== null) ui.mudarMarcadorA(estado.vista === 'fin' ? 'fin' : 'partido');
+    dibujar();
+  },
+
+  reintentarHistorial() {
+    if (estado.reintentoHistorial?.tipo === 'eliminar') {
+      eliminarConfirmado(estado.reintentoHistorial.id);
+    } else {
+      leerHistorial();
+      dibujar();
+    }
+  },
 };
+
+function eliminarConfirmado(id) {
+  if (!puedeCambiar()) return;
+  if (estado.seguimiento?.id === id && estaTerminado(estado.partido)) descartarAnulacion();
+  const resultado = ciclo.eliminar(sesionActual(), id);
+  if (resultado.sesion.pendiente !== null || resultado.estado === 'ok') recibir(resultado);
+  if (resultado.estado === 'error' && resultado.sesion.pendiente === null) {
+    estado.errorHistorial = resultado;
+    estado.reintentoHistorial = { tipo: 'eliminar', id };
+  } else if (resultado.estado === 'ok') {
+    estado.errorHistorial = null;
+    estado.reintentoHistorial = null;
+    estado.vista = 'historial';
+    estado.registroId = null;
+    estado.registroSeleccionado = null;
+    leerHistorial();
+  }
+  dibujar();
+  return resultado;
+}
+
+function leerHistorial() {
+  const lectura = almacen.cargarHistorial();
+  estado.historial = lectura;
+  estado.registroSeleccionado = lectura.estado === 'ok'
+    ? lectura.partidos.find((registro) => registro.id === estado.registroId) ?? null : null;
+  if (lectura.estado === 'error') {
+    estado.errorHistorial = lectura;
+    if (estado.reintentoHistorial?.tipo !== 'eliminar') estado.reintentoHistorial = { tipo: 'leer' };
+  } else if (estado.reintentoHistorial?.tipo !== 'eliminar') {
+    estado.errorHistorial = null;
+    estado.reintentoHistorial = null;
+  }
+}
 
 // Un punto se registra recién con el movimiento elegido: antes no existe (RF-31, RF-33).
 function confirmarPunto(movimientoId) {
+  if (!puedeCambiar({ editar: true })) return;
   const pendiente = estado.pendiente;
   if (pendiente === null) return;
 
   estado.pendiente = null;
   ui.ocultarModal();
 
-  aplicar(scorePoint(estado.partido, pendiente.pareja, {
+  const antes = capturarAntesDelPunto(estado.partido);
+  const despues = scorePoint(estado.partido, pendiente.pareja, {
     jugadorId: pendiente.jugador.id,
     resultado: pendiente.resultado,
     movimientoId,
-  }));
+  });
+  if (despues !== estado.partido) {
+    estado.ultimoPunto = { antes, despues };
+    estado.avisoFin = estaTerminado(despues) && despues.motivoFin === 'sets';
+  }
+  aplicar(despues);
 
   // El jugador ya no queda elegido: el punto está anotado, así que los botones verde/rojo
   // desaparecen y la ficha vuelve a su estado normal. Para el siguiente punto hay que volver
@@ -236,15 +396,14 @@ function dibujar() {
 // así que comparar referencias dice si la acción surtió efecto.
 function aplicar(nuevoPartido, { limpiar = false } = {}) {
   const cambio = nuevoPartido !== estado.partido;
-  estado.partido = nuevoPartido;
+  if (cambio) recibir(ciclo.aplicar(sesionActual(), nuevoPartido));
 
   if (limpiar) limpiarTodo();
-  if (cambio) persistir();
 
   dibujar();
 
-  // El fin automático no pide confirmación: muestra el resultado y el resumen (RF-61).
-  if (cambio && terminoSolo()) mostrarFin();
+  // Edición terminal conserva el fin habitual; una carga terminal espera Avanzar/Anular.
+  if (cambio && !estado.avisoFin && terminoSolo()) mostrarFin();
 }
 
 function terminoSolo() {
@@ -275,12 +434,61 @@ function limpiarTodo() {
   ui.ocultarModal();
 }
 
-// Al terminar se limpia lo guardado (RF-58). El resumen sale del estado en memoria, así que
-// sigue estando disponible aunque no quede nada persistido (RF-82).
-function persistir() {
-  if (estado.partido === null) return;
-  if (estaTerminado(estado.partido)) almacen.limpiar();
-  else almacen.guardar(estado.partido);
+function sesionActual() {
+  return {
+    partido: estado.partido, seguimiento: estado.seguimiento, conservacion: estado.conservacion,
+    pendiente: estado.pendienteGuardado, error: estado.errorPersistencia,
+  };
+}
+
+// Consulta compartida con los futuros controles; no basta con deshabilitar el botón.
+export function puedeAnularUltimoPunto() {
+  return estado.pendienteGuardado === null && estado.conservacion !== 'eliminado'
+    && tokenEsAnulable(estado.partido, estado.ultimoPunto);
+}
+
+function descartarAnulacion() {
+  estado.ultimoPunto = null;
+  estado.avisoFin = false;
+}
+
+function recibir(resultado) {
+  const sesion = resultado.sesion;
+  estado.partido = sesion.partido;
+  estado.seguimiento = sesion.seguimiento;
+  estado.conservacion = sesion.conservacion;
+  estado.pendienteGuardado = sesion.pendiente;
+  estado.errorPersistencia = sesion.error ?? (resultado.estado === 'error' ? resultado : null);
+  if (resultado.estado === 'error') {
+    const mensaje = resultado.fase === 'limpieza'
+      ? 'El cambio del historial ya se guardó, pero no se pudo limpiar el partido activo. Reintentá antes de continuar.'
+      : 'No se pudo completar el guardado o la eliminación. Reintentá antes de continuar; recargar puede perder cambios todavía no guardados.';
+    ui.mostrarAviso(mensaje, true);
+  }
+  return resultado.estado === 'ok';
+}
+
+function puedeCambiar({ editar = false, desdeAviso = false } = {}) {
+  if (estado.pendienteGuardado !== null) {
+    ui.mostrarAviso('Hay datos pendientes de conservación. Reintentá antes de continuar.', true);
+    return false;
+  }
+  if (estado.avisoFin && !desdeAviso) return false;
+  if (editar && estado.conservacion === 'eliminado') {
+    ui.mostrarAviso('Este partido fue eliminado del historial. Podés reiniciar o empezar otro.', true);
+    return false;
+  }
+  return true;
+}
+
+function sincronizarVista() {
+  if (estado.partido === null) {
+    estado.vista = 'crear';
+    ui.mudarMarcadorA('partido');
+    dibujar();
+  } else if (estado.avisoFin) volverAlPartido();
+  else if (estaTerminado(estado.partido)) mostrarFin();
+  else volverAlPartido();
 }
 
 // "Empezar otro" vuelve a la creación con la configuración en cero (RF-65).
@@ -308,13 +516,16 @@ export function iniciar({ contenedor, capaModal } = {}) {
   document.querySelector('.creacion')?.addEventListener('input', () => ui.render(estado));
 
   // Si hay un partido guardado se retoma directo, sin pantalla intermedia (RF-57).
-  const guardado = almacen.cargar();
-  if (guardado !== null) {
-    estado.partido = guardado;
-    estado.vista = 'partido';
-  }
-
-  dibujar();
+  // No acceder a storage desde el dueño: el mismo protocolo se prueba sin DOM.
+  Object.assign(estado, {
+    partido: null, vista: 'crear', jugadorSeleccionado: null, pendiente: null, editor: null,
+    seguimiento: null, conservacion: 'activo', pendienteGuardado: null, errorPersistencia: null,
+    vistaRetorno: 'crear', historial: { estado: 'ausente' }, registroId: null,
+    registroSeleccionado: null, errorHistorial: null, reintentoHistorial: null, ultimoPunto: null, avisoFin: false,
+  });
+  ui.ocultarModal();
+  recibir(ciclo.recuperar());
+  sincronizarVista();
   return estado;
 }
 

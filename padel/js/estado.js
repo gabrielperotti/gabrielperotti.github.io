@@ -1,87 +1,160 @@
-// Persistencia del partido en curso. Habla con localStorage y no sabe de reglas (plan §9).
-// El estado es efímero: sin historial, sin migraciones, sin nada que sincronizar.
-
+// Persistencia local: valida estructura, no decide reglas ni coordina la finalización.
 const CLAVE = 'padel-scores.partido.v1';
-const VERSION_ESPERADA = 1;
+const CLAVE_HISTORIAL = 'padel-scores.historial.v1';
 
-// El `storage` se inyecta para poder testear sin navegador. Por defecto es el del navegador.
-export function crearAlmacen(storage = globalThis.localStorage) {
+// Sin parámetro default: el getter de localStorage también puede lanzar.
+// Lecturas: { estado: 'ausente' }, { estado: 'ok', ... } o error.
+// Mutaciones: { estado: 'ok' } o { estado: 'error', etapa, clave, error }.
+export function crearAlmacen(storage) {
+  function leer(clave, validar, adaptar) {
+    let etapa = 'acceso';
+    try {
+      const destino = storage === undefined ? globalThis.localStorage : storage;
+      etapa = 'lectura';
+      const raw = destino.getItem(clave);
+      if (raw === null) return { estado: 'ausente' };
+      etapa = 'formato';
+      const datos = JSON.parse(raw);
+      if (!validar(datos)) throw new Error('Formato almacenado incompatible');
+      return { estado: 'ok', ...adaptar(datos) };
+    } catch (error) {
+      return { estado: 'error', etapa, clave, error };
+    }
+  }
+
+  function mutar(clave, operacion, datos, validar) {
+    let etapa = 'validacion';
+    try {
+      let raw;
+      if (operacion === 'escritura') {
+        raw = JSON.stringify(datos);
+        if (!validar(JSON.parse(raw))) throw new Error('Datos a guardar incompatibles');
+      }
+      etapa = 'acceso';
+      const destino = storage === undefined ? globalThis.localStorage : storage;
+      etapa = operacion;
+      if (operacion === 'escritura') destino.setItem(clave, raw);
+      else destino.removeItem(clave);
+      return { estado: 'ok' };
+    } catch (error) {
+      return { estado: 'error', etapa, clave, error };
+    }
+  }
+
+  const cargar = () => leer(CLAVE, activoValido, (datos) => datos.version === 1
+    ? { partido: datos, seguimiento: null }
+    : { partido: datos.partido, seguimiento: datos.seguimiento });
+  const cargarHistorial = () => leer(CLAVE_HISTORIAL, historialValido, (datos) => ({ partidos: datos.partidos }));
+
+  function modificarHistorial(transformar) {
+    const lectura = cargarHistorial();
+    if (lectura.estado === 'error') return lectura;
+    return mutar(CLAVE_HISTORIAL, 'escritura', {
+      version: 1,
+      partidos: transformar(lectura.estado === 'ausente' ? [] : lectura.partidos),
+    }, historialValido);
+  }
+
   return {
-    // Escribe el partido entero: marcador, configuración y estadísticas. Sin historial.
-    guardar(partido) {
-      try {
-        storage.setItem(CLAVE, JSON.stringify(partido));
-      } catch (error) {
-        // Sin historial no hay nada que sacrificar: se conserva lo anterior y se avisa.
-        // Constitución 9: nunca romper un partido en curso.
-        reportarFalloDeGuardado(error);
-      }
+    cargar,
+    guardar(partido, seguimiento) {
+      const lectura = cargar();
+      if (lectura.estado === 'error') return lectura;
+      return mutar(CLAVE, 'escritura', { version: 2, partido, seguimiento }, activoValido);
     },
-
-    // null si no hay nada. null y clave borrada si el JSON está corrupto o la versión no es la.
-    cargar() {
-      const raw = storage.getItem(CLAVE);
-      if (raw === null || raw === undefined) return null;
-
-      let datos;
-      try {
-        datos = JSON.parse(raw);
-      } catch {
-        storage.removeItem(CLAVE);
-        return null;
-      }
-
-      if (!tieneFormaDePartido(datos)) {
-        storage.removeItem(CLAVE);
-        return null;
-      }
-
-      return datos;
-    },
-
     limpiar() {
-      storage.removeItem(CLAVE);
+      const lectura = cargar();
+      if (lectura.estado === 'error') return lectura;
+      return mutar(CLAVE, 'limpieza');
+    },
+    cargarHistorial,
+    guardarTerminado(registro) {
+      if (!registroValido(registro)) {
+        return { estado: 'error', etapa: 'validacion', clave: CLAVE_HISTORIAL, error: new Error('Registro incompatible') };
+      }
+      return modificarHistorial((partidos) => {
+        const indice = partidos.findIndex((partido) => partido.id === registro.id);
+        if (indice === -1) return [...partidos, registro];
+        return partidos.map((partido, i) => i === indice ? registro : partido);
+      });
+    },
+    eliminarTerminado(id) {
+      if (!idValido(id)) {
+        return { estado: 'error', etapa: 'validacion', clave: CLAVE_HISTORIAL, error: new Error('ID incompatible') };
+      }
+      return modificarHistorial((partidos) => partidos.filter((partido) => partido.id !== id));
     },
   };
 }
 
-// La versión sola no alcanza: si el estado quedó a medio escribir o lo dejó una versión
-// anterior del formato, adoptarlo deja la app muerta en el primer render y el error se repite
-// en cada carga. Lo que no tiene la forma que la app sabe leer se descarta (RF-60).
-//
-// No es migración: si no tiene la forma esperada, se tira y se empieza de cero (constitución 9).
-function tieneFormaDePartido(datos) {
-  if (datos === null || typeof datos !== 'object') return false;
-  if (datos.version !== VERSION_ESPERADA) return false;
+const objeto = (valor) => valor !== null && typeof valor === 'object' && !Array.isArray(valor);
+const entero = (valor) => Number.isSafeInteger(valor) && valor >= 0;
+const equipo = (valor) => valor === 'A' || valor === 'B';
+const idValido = (valor) => typeof valor === 'string' && valor.trim().length > 0;
+const fechaValida = (valor) => typeof valor === 'string' && !Number.isNaN(Date.parse(valor))
+  && new Date(valor).toISOString() === valor;
+const puntosValidos = (valor) => objeto(valor) && entero(valor.A) && entero(valor.B);
 
-  const marcador = datos.marcador;
-  if (marcador === null || typeof marcador !== 'object') return false;
-  if (!Array.isArray(marcador.sets) || marcador.sets.length === 0) return false;
-  if (marcador.servidor !== 'A' && marcador.servidor !== 'B') return false;
-
-  for (const letra of ['A', 'B']) {
-    const pareja = datos.parejas?.[letra];
-    if (pareja === null || typeof pareja !== 'object') return false;
-    // `nombre` en la pareja es la forma vieja, cuando el equipo tenía un nombre propio.
-    // Ahora no existe: los equipos se llaman por sus jugadores. No hay migración (el estado es
-    // efímero, constitución 9), así que un partido guardado con esa forma se descarta y se
-    // empieza de cero (RF-60). Adoptarlo no rompería nada visible —el nombre está de más y
-    // nadie lo lee—, pero es un estado de una versión del modelo que la app ya no tiene.
-    if ('nombre' in pareja) return false;
-    if (!Array.isArray(pareja.jugadores) || pareja.jugadores.length === 0) return false;
-    if (!pareja.jugadores.every((jugador) => typeof jugador?.nombre === 'string')) return false;
-    if (!pareja.jugadores.every((jugador) => typeof jugador?.id === 'string')) return false;
-  }
-
-  if (datos.config === null || typeof datos.config !== 'object') return false;
-  if (typeof datos.config.setsParaGanar !== 'number') return false;
-
-  return datos.estadisticas === null || typeof datos.estadisticas === 'object';
+function seguimientoValido(datos) {
+  return objeto(datos) && idValido(datos.id)
+    && (datos.fechaFin === null || fechaValida(datos.fechaFin))
+    && ['ninguna', 'archivar', 'retirar', 'eliminar'].includes(datos.operacion)
+    && (datos.operacion !== 'archivar' || fechaValida(datos.fechaFin))
+    && (datos.operacion !== 'eliminar' || idValido(datos.objetivoId))
+    && (datos.objetivoId === undefined || idValido(datos.objetivoId));
 }
 
-// Informe en consola y nada más: la app sigue andando con el estado en memoria.
-function reportarFalloDeGuardado(error) {
-  if (globalThis.console !== undefined && typeof globalThis.console.warn === 'function') {
-    globalThis.console.warn('No se pudo guardar el partido:', error);
+function activoValido(datos) {
+  return objeto(datos) && (datos.version === 1 ? partidoValido(datos)
+    : datos.version === 2 && partidoValido(datos.partido) && seguimientoValido(datos.seguimiento));
+}
+
+function registroValido(datos) {
+  return objeto(datos) && idValido(datos.id) && fechaValida(datos.fechaFin)
+    && partidoValido(datos.partido) && datos.partido.estado === 'terminado';
+}
+
+function historialValido(datos) {
+  return objeto(datos) && datos.version === 1 && Array.isArray(datos.partidos)
+    && datos.partidos.every(registroValido)
+    && new Set(datos.partidos.map((partido) => partido.id)).size === datos.partidos.length;
+}
+
+function partidoValido(datos) {
+  if (!objeto(datos) || datos.version !== 1) return false;
+  if (!['en_curso', 'terminado'].includes(datos.estado) || ![null, 'sets', 'manual'].includes(datos.motivoFin)) return false;
+  const config = datos.config;
+  if (!objeto(config) || ![1, 3, 5].includes(config.setsAElegir)
+    || ![1, 2, 3].includes(config.setsParaGanar)
+    || !['ventaja', 'punto_oro', 'star_point'].includes(config.modalidad)
+    || !equipo(config.parejaQueSacaElPrimero)) return false;
+  if (!objeto(datos.parejas)) return false;
+  const ids = new Set();
+  for (const letra of ['A', 'B']) {
+    const pareja = datos.parejas[letra];
+    if (!objeto(pareja) || !Array.isArray(pareja.jugadores) || pareja.jugadores.length === 0) return false;
+    for (const jugador of pareja.jugadores) {
+      if (!objeto(jugador) || !idValido(jugador.id) || ids.has(jugador.id)
+        || typeof jugador.nombre !== 'string' || !entero(jugador.puesto) || jugador.puesto === 0) return false;
+      ids.add(jugador.id);
+    }
   }
+  const marcador = datos.marcador;
+  if (!objeto(marcador) || !equipo(marcador.servidor) || typeof marcador.terminado !== 'boolean'
+    || !Array.isArray(marcador.sets) || marcador.sets.length === 0 || !marcador.sets.every(setValido)) return false;
+  if (!objeto(datos.estadisticas)) return false;
+  return Object.values(datos.estadisticas).every((estadistica) => objeto(estadistica)
+    && ['winners', 'fallos'].every((tipo) => objeto(estadistica[tipo])
+      && Object.values(estadistica[tipo]).every(entero)));
+}
+
+function setValido(set) {
+  if (!objeto(set) || !puntosValidos(set.juegos) || typeof set.porTieBreak !== 'boolean'
+    || !(set.tieBreak === null || puntosValidos(set.tieBreak))) return false;
+  if (set.juego === null) return true;
+  const juego = set.juego;
+  return objeto(juego) && puntosValidos(juego.puntos)
+    && ['normal', 'iguales', 'ventaja', 'star_point', 'tie_break'].includes(juego.fase)
+    && (juego.ventajaDe === null || equipo(juego.ventajaDe))
+    && (juego.cicloStar === null || entero(juego.cicloStar));
 }

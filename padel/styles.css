@@ -8,8 +8,7 @@
    Sin font-face, sin CDN, sin build: la pila del sistema (Roboto en Android, SF Pro en
    iOS) y SVG inline. Cero dependencias.
 
-   La orientación la resuelve `@media (orientation: …)`, no JavaScript: así rotar el
-   teléfono no puede desincronizar nada del DOM.
+   Un único layout vertical, también en PC. Rotar no cambia el DOM ni el estado.
    ========================================================================== */
 
 /* ---------------------------------------------------------------- tokens */
@@ -43,20 +42,9 @@
   --eq-a: #3bc7e8;
   --eq-a-fuerte: #1596b8;
   --eq-a-lavado: rgb(59 199 232 / 15%);
-  /* Fondo del monograma: un velo OSCURO del color del equipo, no un lavado claro.
-     Un lavado claro acerca el fondo al color de la letra y le baja el contraste al 2,7:1;
-     oscurecerlo lo sube a más de 7:1 sin cambiar el lenguaje visual. Es un velo casi opaco
-     porque en horizontal la inicial queda en 22px, que ya es texto normal y necesita 4,5:1. */
-  --eq-a-fondo: rgb(4 20 31 / 78%);
-  /* Tinte claro del color del equipo, para el monograma. Es el mismo tono que el tope
-     superior del degradado de los botones: la inicial va sobre una caja oscura y con el
-     color pleno quedaba en 4,45:1, justo por debajo del 4,5:1 que pide WCAG. */
-  --eq-a-claro: #7fe3f8;
   --eq-b: #ff8a3c;
   --eq-b-fuerte: #d1600f;
   --eq-b-lavado: rgb(255 138 60 / 15%);
-  --eq-b-fondo: rgb(20 9 2 / 78%);
-  --eq-b-claro: #ffb478;
 
   /* Amarillo de pelota: SOLO para el saque, los avisos de set/match point y el botón de
      empezar. Nada más, para que no compita con la pareja B. */
@@ -121,15 +109,20 @@ body {
   background: var(--n-0);
 }
 
+body {
+  min-height: 100dvh;
+  background: linear-gradient(135deg, #102c3b, var(--n-0) 48%, #302219);
+}
+
 /* ============================================================ armazón común */
 
 .pantalla {
   position: relative;
   display: flex;
   flex-direction: column;
-  width: 100%;
-  height: 100dvh;
-  overflow: hidden;
+  width: min(100%, 480px);
+  height: max(740px, 100dvh);
+  margin-inline: auto;
   padding: 8px var(--lateral) calc(10px + env(safe-area-inset-bottom, 0px));
   background: var(--n-0);
   color: var(--t-1);
@@ -144,6 +137,79 @@ body {
 .fin {
   flex: 1 1 auto;
   min-height: 0;
+}
+
+/* Historial: vistas de lectura con scroll natural, sin altura fija del contenido. */
+.historial {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+  padding-block: 12px;
+}
+
+.historial__cab {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.historial__cab > .btn {
+  flex: 0 0 auto;
+  max-width: 100%;
+  white-space: normal;
+}
+
+.historial h2,
+.historico h3,
+.historico p,
+.conservacion p {
+  margin: 0;
+}
+
+.historial__nota,
+.historico time,
+.historico__motivo {
+  color: var(--t-2);
+}
+
+.historico,
+.conservacion {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+  padding: 14px;
+  border: 1px solid var(--linea);
+  border-radius: var(--r-md);
+  background: var(--n-2);
+  overflow-wrap: anywhere;
+}
+
+.conservacion {
+  flex: none;
+  margin-block: 8px;
+  border-color: var(--rojo);
+}
+
+.historico__stats {
+  width: 100%;
+  table-layout: fixed;
+  border-collapse: collapse;
+}
+
+.historico__stats th,
+.historico__stats td {
+  padding: 8px 4px;
+  border-bottom: 1px solid var(--linea);
+  text-align: right;
+}
+
+.historico__stats th:first-child {
+  width: 50%;
+  text-align: left;
 }
 
 .partido {
@@ -769,10 +835,9 @@ body {
 .ficha {
   --equipo: var(--eq-a);
   --lavado: var(--eq-a-lavado);
-  --fondo-mono: var(--eq-a-fondo);
-  --mono-texto: var(--eq-a-claro);
   position: relative;
   display: flex;
+  flex-direction: column;
   min-width: 0; /* como ítem del grid tiene que poder encogerse más allá del min-content */
   padding: 9px;
   border: 1px solid rgb(255 255 255 / 13%);
@@ -786,8 +851,6 @@ body {
 .ficha--b {
   --equipo: var(--eq-b);
   --lavado: var(--eq-b-lavado);
-  --fondo-mono: var(--eq-b-fondo);
-  --mono-texto: var(--eq-b-claro);
 }
 
 /* Filete del color de la pareja en el borde que mira a la red: identifica al equipo sin
@@ -832,19 +895,6 @@ body {
   text-align: right;
 }
 
-.ficha__mono {
-  flex: none;
-  width: 84px;
-  height: 84px;
-  display: grid;
-  place-items: center;
-  border-radius: 25px;
-  background: var(--fondo-mono);
-  border: 1px solid rgb(255 255 255 / 12%);
-  color: var(--mono-texto);
-  font: 800 var(--f-30) / 1 var(--sans);
-}
-
 .ficha__nombre {
   min-width: 0;
   max-width: 100%;
@@ -875,10 +925,8 @@ body {
   align-items: center;
   justify-content: center;
   gap: 6px;
-  /* Ni con el nombre más largo el botón baja de 56px de ancho: sin este mínimo, en la
-     ficha elegida los botones se angostan a 20px y quedan imposibles de apuntar. El
-     nombre es lo que se encoge, no el botón. */
-  min-width: 56px;
+  /* Dos objetivos táctiles completos, incluso en una ficha de teléfono angosto. */
+  min-width: 44px;
   min-height: var(--alto-minimo);
   padding: 0 8px;
   border: 1px solid transparent;
@@ -920,8 +968,7 @@ body {
   opacity: 0.78;
 }
 
-/* Elegida: encabezado compacto (monograma chico + nombre) y los dos botones al lado.
-   Todo entra en los ~170px de alto de la fila. */
+/* Elegida: nombre completo arriba, resultados en una fila debajo. */
 .ficha--elegida {
   justify-content: flex-start;
   gap: 7px;
@@ -929,59 +976,32 @@ body {
 }
 
 .ficha--elegida .ficha__hit {
-  /* El encabezado toma lo que necesita y los botones se llevan el resto. Con el reparto
-     al revés el nombre se quedaba sin ancho y partía "Gabi" en tres líneas. */
-  flex: 0 1 auto;
-  flex-direction: row;
+  /* El nombre usa el ancho completo; los botones mantienen su altura táctil debajo. */
+  flex: 1 1 auto;
+  flex-direction: column;
   justify-content: flex-start;
   gap: 8px;
   min-width: 0;
-}
-
-.ficha--elegida .ficha__mono {
-  width: 38px;
-  height: 38px;
-  border-radius: 12px;
-  font-size: var(--f-15);
 }
 
 .ficha--elegida .ficha__nombre {
   font-size: var(--f-13);
   line-height: 1.2;
   text-align: left;
-  /* Con el nombre al lado del monograma no hay ancho para partir la palabra: mejor un
-     puntito suspensivo que tres renglones de una letra. */
-  overflow: hidden;
-  overflow-wrap: normal;
-  white-space: nowrap;
-  text-overflow: ellipsis;
+  overflow-wrap: anywhere;
 }
 
 .ficha--elegida .ficha__acciones {
   display: flex;
-  flex-direction: column;
-  flex: 1 1 auto;
-  min-width: 62px;
-  width: auto;
+  flex-direction: row;
+  flex: none;
+  min-width: 0;
+  width: 100%;
 }
 
 .ficha--elegida .resultado {
   padding: 0 6px;
   font-size: var(--f-13);
-}
-
-/* ------------------------------------------- el piso de la cancha
-
-   En vertical no hay piso: los avisos viven en el pie del marcador. En horizontal el
-   marcador es un riel de 70px y no entra, así que bajan acá, que en horizontal sobra a los
-   lados. El texto se escribe en los dos lugares y la orientación muestra uno. */
-
-.piso-info {
-  display: none;
-  position: absolute;
-  align-items: flex-start;
-  gap: 8px;
-  pointer-events: none;
 }
 
 /* ============================================================ BARRA DE ACCIONES */
@@ -991,6 +1011,15 @@ body {
   display: flex;
   gap: 8px;
   margin-top: 9px;
+}
+
+.acciones--partido {
+  flex-wrap: wrap;
+}
+
+.acciones--partido .btn--anular {
+  flex-basis: 100%;
+  white-space: normal;
 }
 
 .btn {
@@ -1017,6 +1046,36 @@ body {
   border-color: transparent;
   box-shadow: none;
   color: var(--t-2);
+}
+
+.btn--anular {
+  background: linear-gradient(180deg, #284d69, #1d3c55);
+  border-color: #6ba6ce;
+  color: #e6f4ff;
+  cursor: pointer;
+}
+
+.btn--anular:enabled:hover {
+  background: #315d7e;
+}
+
+.btn--anular:enabled:active {
+  background: #163149;
+  box-shadow: var(--s-inside);
+  transform: translateY(1px);
+}
+
+.btn--anular:focus-visible {
+  outline: 2px solid #b9e1ff;
+  outline-offset: 3px;
+}
+
+.btn--anular:disabled {
+  background: #19232e;
+  border-color: #303d4a;
+  color: #788694;
+  box-shadow: none;
+  cursor: not-allowed;
 }
 
 .btn--pelota {
@@ -1340,18 +1399,15 @@ body {
   text-align: center;
 }
 
-/* ============================================================ HOJA DE MOVIMIENTOS
-
-   La hoja base es la de pegada al borde inferior: el modal de resumen y el modal de
-   movimientos cuando no entra anclada a la ficha. El modal de movimientos, en cambio, se ancla
-   arriba de la ficha del jugador que se acaba de tocar, o abajo de ella si arriba no entra
-   (`.hoja--flotante`). Cuando flota, el marcador queda entero a la vista igual que antes: el
-   velo sigue arrancando abajo de su franja. */
+/* ============================================================ HOJA DE MOVIMIENTOS */
 
 .capa-modal {
   position: fixed;
   inset: 0;
   z-index: 10;
+  display: grid;
+  place-items: center;
+  padding: max(10px, env(safe-area-inset-top, 0px)) 10px max(10px, env(safe-area-inset-bottom, 0px));
 }
 
 /* El velo arranca ABAJO del marcador: éste nunca se atenúa, ni un poquito. Es un
@@ -1370,59 +1426,47 @@ body {
 }
 
 .hoja {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
+  position: relative;
+  width: min(100%, 460px);
   z-index: 9;
   display: flex;
   flex-direction: column;
   padding: 8px 12px calc(14px + env(safe-area-inset-bottom, 0px));
-  border-radius: var(--r-lg) var(--r-lg) 0 0;
+  border-radius: var(--r-lg);
   background: linear-gradient(180deg, #1b2835, var(--n-2));
   border-top: 1px solid rgb(255 255 255 / 12%);
   box-shadow: var(--s-hoja);
   max-height: 100%;
+  min-height: 0;
+  overflow-y: auto;
 }
 
-/* La variante anclada a la ficha del jugador. `top` y el alto máximo no se inventan acá:
-   llegan como `--top` y `--alto-max` desde `posicionDeHoja` (ui.js), que es quien sabe si la
-   hoja entra arriba de la ficha, abajo de ella o en ningún lado. Los `var(…, auto)` /
-   `var(…, 100%)` son sólo para que la hoja sea válida durante la medición, antes de que la
-   JS escriba las dos medidas.
-
-   El ancho NO se toca: sigue `left: 0; right: 0`, o sea el ancho de la pantalla menos los
-   márgenes laterales. El anclaje es vertical, y con 3 columnas de botones de 54px angostarla
-   rompe los objetivos táctiles.
-
-   La sombra es la de tarjeta (`--s-piso`), no `--s-hoja`: la de la hoja está hecha para algo
-   pegado al fondo, con la línea de luz arriba y la sombra proyectada hacia arriba. Flotando
-   hace falta que la caja se despegue en las cuatro direcciones. */
-.hoja--flotante {
-  top: var(--top, auto);
-  bottom: auto;
-  max-height: var(--alto-max, 100%);
-  /* Red de seguridad: si el alto natural llegara a apretar, el contenido scrollea adentro
-     en vez de salirse de la pantalla. */
-  overflow: auto;
-  border: 1px solid var(--linea);
-  border-radius: var(--r-lg);
-  box-shadow: var(--s-piso), 0 12px 30px -14px rgb(0 0 0 / 85%);
+.velo--fin {
+  background: rgb(2 6 10 / 78%);
 }
 
-/* El tirador era para arrastrar una hoja pegada al fondo. Flotando no se arrastra nada, así
-   que un tirador ahí le mentiría a la persona que lo toca. */
-.hoja--flotante .hoja__agarre {
-  display: none;
+.hoja--fin {
+  padding: 20px 16px;
+  gap: 16px;
 }
 
-.hoja__agarre {
-  width: 38px;
-  height: 4px;
-  border-radius: var(--r-full);
-  background: var(--n-4);
-  margin: 0 auto 10px;
+.hoja--fin h2 {
+  margin: 0;
+  overflow-wrap: anywhere;
+  font-size: 1.5rem;
+  line-height: 1.3;
+}
+
+.aviso-fin__acciones {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.aviso-fin__acciones .btn {
   flex: none;
+  white-space: normal;
+  line-height: 1.2;
 }
 
 .hoja__titulo {
@@ -1598,6 +1642,12 @@ body {
   text-align: right;
 }
 
+.fin__motivo--eliminado {
+  min-width: 0;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
 .fin__izq,
 .fin__der {
   display: contents;
@@ -1725,484 +1775,4 @@ body {
 
 .fin .acciones {
   margin-top: auto;
-}
-
-/* ============================================================================
-   HORIZONTAL — otro layout, no el vertical encogido.
-
-   El marcador es un riel de 70px con los parciales en el medio y el punto del juego a
-   la derecha de ellos. Los nombres de pareja van en los extremos. El saque y los avisos
-   no entran acá: viven en el piso de la cancha, que en horizontal sobra a los lados.
-   ========================================================================== */
-
-@media (orientation: landscape) {
-  .pantalla {
-    padding: 5px 8px calc(7px + env(safe-area-inset-bottom, 0px));
-    gap: 0;
-  }
-
-  /* --- el riel */
-
-  .marcador {
-    grid-template-columns: minmax(0, auto) minmax(0, 1fr) auto auto minmax(0, auto);
-    grid-template-areas: 'eqA parciales puntos sets eqB';
-    align-items: center;
-    gap: 0 10px;
-    height: 70px;
-    padding: 0 12px;
-  }
-
-  .eq {
-    max-width: 118px;
-  }
-
-  .marcador__parciales {
-    justify-content: flex-start;
-  }
-
-  .parciales {
-    flex-wrap: nowrap;
-    overflow-x: auto;
-    scrollbar-width: none;
-  }
-
-  .parciales::-webkit-scrollbar {
-    display: none;
-  }
-
-  .parcial {
-    height: 46px;
-    flex: none;
-  }
-
-  .parcial button {
-    min-height: 44px;
-    min-width: 40px;
-    font-size: var(--f-13);
-  }
-
-  .parcial__guion {
-    font-size: var(--f-13);
-  }
-
-  .sets {
-    margin-left: 0;
-    padding-left: 0;
-    gap: 3px;
-  }
-
-  .sets__caja {
-    width: 24px;
-    height: 24px;
-    border-radius: 7px;
-    font-size: var(--f-13);
-  }
-
-  .sets__txt {
-    font-size: 10px;
-  }
-
-  .punto__medio {
-    display: none;
-  }
-
-  .marcador__puntos {
-    gap: 8px;
-  }
-
-  .punto {
-    height: 54px;
-    max-width: none;
-    min-width: 82px;
-    font-size: 36px;
-    border-radius: var(--r-chip);
-  }
-
-  .punto--etiqueta {
-    font-size: var(--f-22);
-  }
-
-  /* El editor ocupa la columna del medio del riel, la misma de los parciales, y no una
-     fila nueva: el riel está fijo en 70px, así que una fila extra quedaba recortada por
-     `overflow: hidden` y no se veía nada. Los parciales se ocultan mientras se edita y el
-     rótulo del editor dice qué se está tocando. */
-  .editor {
-    grid-area: parciales;
-    grid-column: auto;
-    align-self: center;
-    height: 58px;
-    padding: 6px 7px;
-    gap: 6px;
-  }
-
-  .marcador--editando .marcador__parciales {
-    display: none;
-  }
-
-  .editor__rotulo {
-    flex-direction: row;
-    align-items: baseline;
-    gap: 5px;
-  }
-
-  .editor__valor {
-    font-size: var(--f-13);
-    max-width: 70px;
-  }
-
-  .opcion {
-    height: 44px;
-    font-size: var(--f-15);
-  }
-
-  .editor__cerrar {
-    height: 44px;
-  }
-
-  /* El aviso de "punto activo" no cabe en un riel de 70px: el dato editado ya se
-     distingue por el editor abierto. */
-  .punto--activo {
-    outline-offset: -1px;
-  }
-
-  /* --- los avisos, al piso */
-
-  .marcador__pie {
-    display: none;
-  }
-
-  .piso-info {
-    display: flex;
-    flex-direction: column;
-    left: 16px;
-    top: 12px;
-    right: 16px;
-    gap: 6px;
-  }
-
-  /* --- la cancha: 2:1 real, centrada, con la red vertical */
-
-  .cancha__tabla {
-    inset: 0 20%;
-  }
-
-  .cancha__tabla::before {
-    background:
-      radial-gradient(15% 22% at 17% 25%, rgb(59 199 232 / 26%), transparent 72%),
-      radial-gradient(15% 22% at 17% 75%, rgb(59 199 232 / 26%), transparent 72%),
-      radial-gradient(15% 22% at 83% 25%, rgb(255 138 60 / 24%), transparent 72%),
-      radial-gradient(15% 22% at 83% 75%, rgb(255 138 60 / 24%), transparent 72%);
-  }
-
-  .cancha__lineas::before,
-  .cancha__lineas::after {
-    left: auto;
-    right: auto;
-    top: 7px;
-    bottom: 7px;
-    width: 2px;
-    height: auto;
-  }
-
-  .cancha__lineas::before {
-    right: 34.4%;
-  }
-
-  .cancha__lineas::after {
-    left: 34.4%;
-  }
-
-  .cancha__eje {
-    left: 34.4%;
-    top: 50%;
-    width: 31.2%;
-    height: 2px;
-    transform: translateY(-1px);
-  }
-
-  .red {
-    left: 50%;
-    right: auto;
-    top: 8px;
-    bottom: 8px;
-    width: 14px;
-    transform: translateX(-50%);
-    flex-direction: row;
-  }
-
-  .red::before,
-  .red::after {
-    top: auto;
-    left: 0;
-    width: 34px;
-    height: 4px;
-    background: linear-gradient(90deg, rgb(255 255 255 / 78%), rgb(255 255 255 / 16%));
-  }
-
-  .red::before {
-    top: 0;
-  }
-
-  .red::after {
-    bottom: 0;
-    background: linear-gradient(90deg, rgb(255 255 255 / 16%), rgb(255 255 255 / 78%));
-  }
-
-  .red__cinta {
-    width: 3px;
-    height: auto;
-  }
-
-  .red__malla {
-    width: 14px;
-    height: auto;
-    background:
-      repeating-linear-gradient(180deg, rgb(255 255 255 / 40%) 0 1px, transparent 1px 4px),
-      linear-gradient(90deg, rgb(4 14 26 / 62%), rgb(4 14 26 / 88%));
-  }
-
-  /* --- las fichas: dos jugadores de cada lado de la red, en columna */
-
-  /* La ficha es una columna también cuando está elegida: en fila, el encabezado
-     (monograma + nombre) y los dos botones de 56px no entran en 148px y el rojo se va de
-     la ficha. Apilados entran: 34 + 6 + 44 = 84px de los 106 que tiene la fila. */
-  /* Sin prefijo de clase: la orientación la decide este mismo media query. Con un
-     `.horizontal` adelante la regla no matcheaba nunca y la ficha quedaba en fila. */
-  .ficha {
-    flex-direction: column;
-  }
-
-  .fichas__par {
-    top: 9px;
-    bottom: 9px;
-    width: 148px;
-    grid-template-columns: minmax(0, 100%);
-    grid-template-rows: minmax(0, 1fr) minmax(0, 1fr);
-    gap: 14px;
-  }
-
-  .fichas__par--arriba {
-    left: 11px;
-    right: auto;
-    height: auto;
-  }
-
-  .fichas__par--abajo {
-    right: 11px;
-    left: auto;
-    height: auto;
-  }
-
-  .ficha__mono {
-    width: 58px;
-    height: 58px;
-    border-radius: 18px;
-    font-size: var(--f-22);
-  }
-
-  .ficha__nombre {
-    font-size: var(--f-13);
-  }
-
-  /* Elegida en horizontal: encabezado arriba, los dos botones al lado con sólo el glifo. */
-  .ficha--elegida {
-    justify-content: flex-start;
-    gap: 6px;
-    padding: 8px;
-  }
-
-  .ficha--elegida .ficha__hit {
-    flex: none;
-    gap: 7px;
-  }
-
-  .ficha--elegida .ficha__mono {
-    width: 34px;
-    height: 34px;
-    border-radius: 11px;
-    font-size: var(--f-13);
-  }
-
-  .ficha--elegida .ficha__nombre {
-    font-size: var(--f-11);
-    line-height: 1.15;
-  }
-
-  .ficha--elegida .ficha__acciones {
-    flex-direction: row;
-    flex: 1 1 auto;
-    width: auto;
-    min-width: 0;
-  }
-
-  .ficha--elegida .resultado {
-    font-size: var(--f-22);
-    padding: 0 4px;
-  }
-
-  /* --- la barra de acciones sigue siendo una fila */
-
-  .acciones:not(.acciones--fin) {
-    flex-direction: row;
-    gap: 8px;
-  }
-
-  .acciones:not(.acciones--fin) .btn {
-    min-height: 46px;
-  }
-
-  /* --- la creación en horizontal: tres columnas, para que entre entera
-
-     Con dos columnas (parejas apiladas a la izquierda, opciones a la derecha) el contenido
-     mide 483px contra los 378px de la pantalla: "Empezar" caía fuera de la vista y había
-     que scrollear para empezar el partido. Con las dos parejas de pareja y las opciones en
-     una sola fila de tres columnas, la fila más alta son las opciones (250px) y todo entra:
-     30 + 250 + 76 + 16 = 372px. */
-
-  .creacion__campos {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1.2fr);
-    grid-template-areas:
-      'titulo titulo titulo'
-      'parejaA parejaB opciones'
-      'pie    pie    pie';
-    align-content: start;
-    gap: 8px 10px;
-  }
-
-  .creacion__titulo {
-    grid-area: titulo;
-  }
-
-  .creacion__pareja--a {
-    grid-area: parejaA;
-  }
-
-  .creacion__pareja--b {
-    grid-area: parejaB;
-  }
-
-  .opciones {
-    grid-area: opciones;
-  }
-
-  .creacion__pie {
-    grid-area: pie;
-  }
-
-  /* Las parejas conservan su rejilla de dos columnas (nombre arriba, dos jugadores al
-     lado): a una sola columna la tarjeta queda con tres campos apilados y el doble de
-     alta, y la pantalla de creación entera no entra en 390px. */
-  .creacion__pareja {
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  }
-
-  /* Los botones de opción bajan un escalón (de 52/56 a 48/50) para que la pantalla entre
-     entera en 390px de alto. 48 y 50 quedan muy por encima del piso táctil de 44. */
-  .opciones {
-    gap: 7px;
-    padding: 9px;
-  }
-
-  .opcion-set {
-    min-height: 48px;
-  }
-
-  .saca-btn {
-    min-height: 50px;
-  }
-
-  /* El último pixel: con 10 de padding abajo la creación mide 379 contra los 378 de la
-     pantalla y aparecía una barra de scroll de un pixel. */
-  .creacion {
-    padding-bottom: 8px;
-  }
-
-  /* --- el fin en horizontal: dos columnas de verdad, el resumen entero a la derecha */
-
-  .fin {
-    grid-template-columns: 208px minmax(0, 1fr);
-    grid-template-rows: auto auto minmax(0, 1fr);
-    grid-template-areas:
-      'titulo   titulo'
-      'marcador marcador'
-      'acciones resumen';
-    gap: 8px 12px;
-  }
-
-  /* El resumen llena su columna y scrollea sólo si de verdad no entra. Con 12px/1.4 y sin
-     padding de sobra, las 13 líneas de un partido de 3 sets (4 de ellas vacías) entran
-     enteras: 13 × 16.8 = 218px contra los 242px de la caja. */
-  .fin .resumen-caja {
-    flex: 1 1 auto;
-  }
-
-  .resumen {
-    font-size: 12px;
-    line-height: 1.4;
-    padding: 7px 10px 8px;
-  }
-
-  /* El trofeo del encabezado del fin baja un escalón: acá cada píxel de la columna del
-     resumen es un píxel de texto que entra. */
-  .fin__trofeo {
-    width: 28px;
-    height: 28px;
-    border-radius: 9px;
-  }
-
-  .fin__titulo {
-    padding: 0 5px 0 2px;
-  }
-
-  .acciones--fin {
-    gap: 6px;
-  }
-
-  .acciones--fin .acciones__par {
-    display: contents;
-  }
-
-  .acciones--fin .btn {
-    min-height: 46px;
-  }
-
-  /* En horizontal el marcador del fin es una tira de dos filas: los dos nombres de pareja
-     arriba con las cajas de sets en el medio, y los parciales abajo.
-     (Las cajas de sets viven dentro de `.marcador__parciales`, así que no hay un área
-     'sets' propia: el grid del marcador sólo tiene 'eqA', 'eqB' y 'parciales'.) */
-  /* El marcador del fin también es un riel: los parciales en el medio y la cuenta de sets a
-     la derecha de ellos. Una sola fila de 64px — 6 menos que el riel del partido — para que
-     el resumen de abajo entre entero sin scrollear. */
-  .fin__marcador .marcador {
-    grid-template-columns: minmax(0, auto) minmax(0, 1fr) auto minmax(0, auto);
-    grid-template-areas: 'eqA parciales sets eqB';
-    align-items: center;
-    height: 64px;
-    padding: 0 12px;
-    gap: 0 12px;
-  }
-
-  .fin__marcador .marcador__parciales > .micro {
-    display: none;
-  }
-
-  .fin__marcador .marcador__parciales {
-    justify-content: center;
-  }
-
-  .fin__marcador .eq {
-    max-width: 150px;
-  }
-
-  .fin__marcador .parcial {
-    height: 46px;
-    flex: none;
-  }
-
-  .fin__marcador .parcial button {
-    min-height: 44px;
-    min-width: 38px;
-    font-size: var(--f-13);
-  }
 }

@@ -157,6 +157,11 @@ function lineasDeDuelosPorMovimiento(partido) {
     const total = totales.get(movimiento.id) ?? 0;
     if (total > 0) lineas.push(`${SANGRIA}${movimiento.etiqueta} ${total}`);
   }
+  // Las categorías retiradas se conservan al final, sin reinterpretar sus contadores.
+  for (const id of ['banda', 'chapeo']) {
+    const total = totales.get(id) ?? 0;
+    if (total > 0) lineas.push(`${SANGRIA}${etiquetaMovimiento(id)} ${total}`);
+  }
 
   if (lineas.length === 0) return null;
   return ['Duelos:', ...lineas];
