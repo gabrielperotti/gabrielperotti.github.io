@@ -88,6 +88,8 @@ h2 { font-size: clamp(2rem, 4vw, 3rem); line-height: 1.2; letter-spacing: -.025e
 .skillgrid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 18px; }
 .panel { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 26px; }
 .panel-symbol { color: var(--accent); font-size: 1.5rem; }
+.servicegrid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; }
+.servicegrid .panel p { color: var(--muted); margin: 0; }
 h3 { margin: 12px 0 16px; font-size: 1.12rem; line-height: 1.4; }
 .tags { display: flex; flex-wrap: wrap; gap: 8px; list-style: none; padding: 0; margin: 0; }
 .tags li { border: 1px solid var(--line); background: var(--surface2); color: var(--muted); padding: 5px 10px; border-radius: 6px; font-size: .86rem; }
@@ -97,6 +99,7 @@ footer { padding-block: 30px; color: var(--muted); border-top: 1px solid var(--l
 @media (max-width: 900px) {
   .hero { grid-template-columns: 1fr; padding-block: 65px; gap: 40px; }
   .terminal { width: 100%; max-width: 600px; }
+  .servicegrid { grid-template-columns: 1fr; }
   .header-inner { gap: 12px 24px; }
   .preferences { margin-left: auto; }
 }
