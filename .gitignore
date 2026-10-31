@@ -1,0 +1,14 @@
+# Trabajo agéntico local: agentes, configuración y telemetría (incluye runs).
+/.opencode/
+/.agents/
+
+# Políticas, memoria, bootstrap y especificaciones del trabajo agéntico.
+/AGENTS.md
+/MEMORY.md
+/PROJECT_BOOTSTRAP_v3.4.md
+/specs/
+/docs/constitution.md
+/docs/backlog.md
+
+# pruebas
+/pruebas-locales/
