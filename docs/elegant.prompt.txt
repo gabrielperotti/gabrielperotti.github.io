@@ -1,0 +1,75 @@
+====================================================================
+ANÁLISIS ESTÉTICO Y PROPUESTA DE REDISEÑO - GABRIELPEROTTI.COM
+Premisa: Simple y Elegante
+====================================================================
+
+Para lograr que el sitio web de Gabriel Perotti proyecte una estética
+simple y elegante, el enfoque debe pasar de un diseño meramente 
+funcional y básico a uno con intención minimalista premium.
+
+Actualmente, el sitio cumple con listar la información de manera 
+limpia, pero carece de jerarquía visual y toques sofisticados que 
+retengan la atención de un reclutador o cliente corporativo.
+
+--------------------------------------------------------------------
+PUNTOS CLAVE A MEJORAR
+--------------------------------------------------------------------
+
+1. TIPOGRAFÍA Y JERARQUÍA VISUAL
+* El problema: La presentación actual separa los lenguajes y tecnologías 
+  con barras verticales simples (|), lo que satura la lectura visual y 
+  abarata el diseño.
+* La solución: Reemplazar las barras por un sistema de etiquetas sutiles 
+  (pills/badges) con un fondo gris extremadamente claro o un borde fino. 
+  Usar fuentes tipográficas modernas de estilo sans-serif geométrico 
+  (como Inter, Plus Jakarta Sans o SF Pro) con un interletrado 
+  (letter-spacing) ligeramente expandido en los títulos para dar un 
+  aire premium.
+
+2. PALETA DE COLORES Y CONTRASTES
+* El problema: El sitio se siente plano al no explotar un contraste 
+  definido que guíe el recorrido visual.
+* La solución: Adoptar un enfoque "Monocromo con un acento".
+  - Fondo: Un blanco roto (off-white o #FAFAFA) para modo claro, o un 
+    gris oscuro profundo (charcoal o #121212) para modo oscuro. El blanco 
+    puro o negro puro suelen verse menos sofisticados.
+  - Color de acento: Un solo color sofisticado (como un azul medianoche, 
+    verde oliva oscuro o un tono bronce/tierra) utilizado exclusivamente 
+    para el botón de acción principal (el enlace a LinkedIn o la descarga 
+    del CV) y pequeños detalles interactivos.
+
+3. DISTRIBUCIÓN DEL CONTENIDO (LAYOUT) Y ESPACIADO
+* El problema: La estructura compacta comprime los elementos, restándole 
+  "aire" y elegancia al portafolio.
+* La solución: Incrementar drásticamente el uso del espacio en blanco 
+  (whitespace). La elegancia se asocia con el espacio; dar un margen 
+  generoso entre secciones permite que cada bloque respire. En lugar de 
+  una lista plana, se puede estructurar la sección de habilidades en 
+  una cuadrícula (grid) invisible y minimalista.
+
+4. ELEMENTOS DE INTERACCIÓN Y BOTONES
+* El problema: El botón de "Download Resume" y los accesos de contacto 
+  necesitan destacar sin romper la armonía.
+* La solución: Diseñar botones con bordes sutilmente redondeados (un 
+  radio de 6px a 8px da un aspecto más moderno que las esquinas totalmente 
+  rectas o hiper-redondeadas). Implementar transiciones suaves 
+  (transition: all 0.3s ease) en los estados de hover para que los 
+  enlaces cambien de opacidad de manera fluida y elegante.
+
+--------------------------------------------------------------------
+PROPUESTA DE ESTRUCTURA DE REDISEÑO
+--------------------------------------------------------------------
+
+* ENCABEZADO:
+  Nombre en tipografía semibold, menú de navegación flotante o alineado 
+  a la derecha con enlaces en tipografía de menor peso.
+
+* SECCIÓN "ABOUT":
+  Texto alineado a la izquierda con un ancho máximo controlado (ej. 600px) 
+  para facilitar la lectura. Primera frase con un tamaño de fuente mayor.
+
+* BLOQUE DE SKILLS:
+  Agrupados por categorías en cajas minimalistas con bordes casi 
+  imperceptibles (#EAEAEA) y esquinas redondeadas.
+
+====================================================================
