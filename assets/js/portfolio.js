@@ -2,6 +2,8 @@
   'use strict';
   const translations = {
     en: {
+      bitoTalk: 'Talk to Bito', bitoWelcomeTitle: 'Let’s talk', bitoWelcomeText: 'Choose an option or write whatever you like.',
+      bitoProject: 'I have a project', bitoOpportunity: 'I’d like to discuss an opportunity', bitoHelp: 'How can Gabriel help me?', bitoHello: 'Hello',
       bitoTitle: 'Bito assistant', bitoChat: 'Chat with Bito', bitoLoading: 'Loading Bito…', bitoError: 'Bito could not load. Please try again.', bitoRetry: 'Try again',
       profileHeading: 'profile', skip: 'Skip to content', navigation: 'Main navigation', about: 'About me', skills: 'Skills', contact: 'Contact', language: 'Language',
       lightTheme: 'Light theme', darkTheme: 'Dark theme', themeLabel: 'Use light theme',
@@ -25,6 +27,8 @@
       socialDescription: 'From business needs to production: SaaS platforms, AI agents and system integration.'
     },
     pt: {
+      bitoTalk: 'Falar com o Bito', bitoWelcomeTitle: 'Vamos conversar', bitoWelcomeText: 'Escolha uma opção ou escreva o que quiser.',
+      bitoProject: 'Tenho um projeto', bitoOpportunity: 'Quero conversar sobre uma oportunidade', bitoHelp: 'Como o Gabriel pode me ajudar?', bitoHello: 'Olá',
       bitoTitle: 'Assistente Bito', bitoChat: 'Converse com o Bito', bitoLoading: 'Carregando Bito…', bitoError: 'Não foi possível carregar o Bito. Tente novamente.', bitoRetry: 'Tentar novamente',
       profileHeading: 'perfil', skip: 'Pular para o conteúdo', navigation: 'Navegação principal', about: 'Sobre mim', skills: 'Habilidades', contact: 'Contato', language: 'Idioma',
       lightTheme: 'Tema claro', darkTheme: 'Tema escuro', themeLabel: 'Usar tema claro',
@@ -48,6 +52,8 @@
       socialDescription: 'Das necessidades de negócio à produção: plataformas SaaS, agentes de IA e integração de sistemas.'
     },
     es: {
+      bitoTalk: 'Hablar con Bito', bitoWelcomeTitle: 'Conversemos', bitoWelcomeText: 'Elegí una opción o escribí lo que quieras.',
+      bitoProject: 'Tengo un proyecto', bitoOpportunity: 'Quiero conversar sobre una oportunidad', bitoHelp: '¿Cómo puede ayudarme Gabriel?', bitoHello: 'Hola',
       bitoTitle: 'Asistente Bito', bitoChat: 'Conversá con Bito', bitoLoading: 'Cargando Bito…', bitoError: 'No se pudo cargar Bito. Inténtalo de nuevo.', bitoRetry: 'Reintentar',
       profileHeading: 'perfil', skip: 'Saltar al contenido', navigation: 'Navegación principal', about: 'Sobre mí', skills: 'Habilidades', contact: 'Contacto', language: 'Idioma',
       lightTheme: 'Tema claro', darkTheme: 'Tema oscuro', themeLabel: 'Usar tema claro',
@@ -79,6 +85,13 @@
   const picker = document.querySelector('.language-picker');
   const header = document.querySelector('.top');
   let currentLanguage = 'en';
+  document.addEventListener('portfolio:bito-welcome', event => {
+    const text = translations[currentLanguage];
+    Object.assign(event.detail, {
+      title: text.bitoWelcomeTitle, text: text.bitoWelcomeText,
+      suggestions: ['bitoProject', 'bitoOpportunity', 'bitoHelp', 'bitoHello'].map(key => ({ label: text[key], text: text[key] }))
+    });
+  });
   function readPreference(key) {
     try { return localStorage.getItem(key); } catch { return null; }
   }

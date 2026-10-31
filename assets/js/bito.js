@@ -2,6 +2,7 @@
   'use strict';
   const origin = 'https://manny.man.ax';
   const launcher = document.getElementById('bito-launcher');
+  const triggers = [launcher, ...document.querySelectorAll('[data-bito-open]')];
   const panel = document.getElementById('bito-panel');
   const feedback = document.getElementById('bito-feedback');
   const loading = document.getElementById('bito-loading');
@@ -14,6 +15,17 @@
   let container;
   let visitorId;
   let widgetReady;
+  let ready = false;
+  let connected = false;
+  let pendingWelcome;
+  let opener;
+
+  function sendWelcome() {
+    if (!ready || !connected || panel.hidden || !pendingWelcome) return;
+    const payload = pendingWelcome;
+    pendingWelcome = null;
+    window.AssistantSaaS.emitToWidget('startWithSuggestions', payload);
+  }
 
   function identity() {
     if (visitorId) return visitorId;
@@ -38,7 +50,7 @@
       }
       script.src = origin + '/assistant-widget/client/assistant-saas.js';
       script.async = true;
-      script.onload = () => finish(window.AssistantSaaS && ['init', 'open', 'close'].every(key => typeof window.AssistantSaaS[key] === 'function') ? null : new Error('sdk_invalid'));
+      script.onload = () => finish(window.AssistantSaaS && ['init', 'open', 'close', 'emitToWidget'].every(key => typeof window.AssistantSaaS[key] === 'function') ? null : new Error('sdk_invalid'));
       script.onerror = () => finish(new Error('sdk_load'));
       document.head.appendChild(script);
     }).catch(error => { sdkPromise = null; throw error; });
@@ -48,18 +60,20 @@
   function showPanel() {
     panel.hidden = false;
     panel.inert = false;
-    launcher.setAttribute('aria-expanded', 'true');
+    triggers.forEach(button => button.setAttribute('aria-expanded', 'true'));
     panel.focus({ preventScroll: true });
   }
 
   function closePanel() {
     if (panel.hidden) return;
+    pendingWelcome = null;
     if (initialized) window.AssistantSaaS.close();
     if (container) { container.hidden = true; container.inert = true; }
     panel.inert = true;
     panel.hidden = true;
-    launcher.setAttribute('aria-expanded', 'false');
-    launcher.focus({ preventScroll: true });
+    triggers.forEach(button => button.setAttribute('aria-expanded', 'false'));
+    const target = opener && opener.isConnected && !opener.disabled && !opener.closest('[hidden], [inert]') && opener.getClientRects().length ? opener : launcher;
+    target.focus({ preventScroll: true });
   }
 
   function updateTitle() {
@@ -72,6 +86,7 @@
       container.hidden = false;
       container.inert = false;
       window.AssistantSaaS.open();
+      sendWelcome();
       iframe.focus({ preventScroll: true });
       return;
     }
@@ -84,6 +99,8 @@
       try {
         const id = identity();
         sdk = await loadSDK();
+        ready = false;
+        connected = false;
         sdk.init({
           tenantId: 'bito', userExternalId: id, userName: 'gabrielperotti.com',
           userDisplayName: 'Visitante del sitio Gabriel Perotti · ' + id.slice(-8),
@@ -107,9 +124,12 @@
         feedback.hidden = true;
         if (!panel.hidden) {
           sdk.open();
+          sendWelcome();
           if (document.activeElement === panel) iframe.focus({ preventScroll: true });
         }
       } catch {
+        ready = false;
+        connected = false;
         if (sdk && typeof sdk.destroy === 'function') sdk.destroy();
         iframe = null;
         container = null;
@@ -122,11 +142,17 @@
     return initializing;
   }
 
-  launcher.addEventListener('click', () => {
+  triggers.forEach(button => button.addEventListener('click', () => {
     if (!panel.hidden) return;
+    opener = button;
+    pendingWelcome = null;
+    if (button !== launcher) {
+      pendingWelcome = {};
+      document.dispatchEvent(new CustomEvent('portfolio:bito-welcome', { detail: pendingWelcome }));
+    }
     showPanel();
     start();
-  });
+  }));
   retry.addEventListener('click', () => { panel.focus({ preventScroll: true }); start(); });
   document.addEventListener('keydown', event => {
     // Cross-origin iframe keystrokes do not bubble to the host.
@@ -134,9 +160,15 @@
   });
   window.addEventListener('message', event => {
     if (!iframe || event.origin !== origin || event.source !== iframe.contentWindow) return;
-    if (event.data && event.data.type === 'assistant:ready' && widgetReady) widgetReady();
+    if (event.data && event.data.type === 'assistant:ready') {
+      ready = true;
+      if (widgetReady) widgetReady();
+      sendWelcome();
+    }
+    if (event.data && event.data.type === 'assistant:connected') { connected = true; sendWelcome(); }
+    if (event.data && event.data.type === 'assistant:disconnected') connected = false;
     if (event.data && event.data.type === 'assistant:closed') closePanel();
   });
   document.addEventListener('portfolio:language', updateTitle);
-  launcher.hidden = false;
+  triggers.forEach(button => { button.hidden = false; });
 })();

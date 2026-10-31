@@ -69,6 +69,10 @@ h1 { font-family: inherit; font-size: clamp(3.7rem, 7.5vw, 6.2rem); line-height:
 .btn:hover { transform: translateY(-3px); border-color: var(--accent); }
 .btn.primary { background: var(--accent); color: var(--bg); border-color: var(--accent); }
 html[data-theme='light'] .btn.primary { color: #fff; }
+.btn[data-bito-open] { color: inherit; }
+.btn[data-bito-open]:is(:hover, :focus-visible) { color: #65c8fa; border-color: currentColor; }
+.btn[data-bito-open]:focus-visible { outline-color: currentColor; }
+html[data-theme='light'] .btn[data-bito-open]:is(:hover, :focus-visible) { color: #0b3350; }
 .note { color: var(--muted); font-size: .8rem; margin-top: 14px; }
 .terminal { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; box-shadow: var(--shadow); overflow: hidden; }
 .terminal-head { padding: 14px 18px; border-bottom: 1px solid var(--line); display: flex; align-items: center; justify-content: space-between; gap: 12px; color: var(--muted); font-size: .75rem; }
