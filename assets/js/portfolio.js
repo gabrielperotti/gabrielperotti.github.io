@@ -2,6 +2,7 @@
   'use strict';
   const translations = {
     en: {
+      bitoTitle: 'Bito assistant', bitoChat: 'Chat with Bito', bitoLoading: 'Loading Bito…', bitoError: 'Bito could not load. Please try again.', bitoRetry: 'Try again',
       profileHeading: 'profile', skip: 'Skip to content', navigation: 'Main navigation', about: 'About me', skills: 'Skills', contact: 'Contact', language: 'Language',
       lightTheme: 'Light theme', darkTheme: 'Dark theme', themeLabel: 'Use light theme',
       eyebrow: 'Software development · Full Stack', role: 'Software Engineer | Full Stack',
@@ -11,12 +12,13 @@
       skillsIntro: 'My core technical skills and languages.', programming: 'Programming languages', frameworks: 'Technologies / Frameworks',
       applications: 'Applications / Databases', spoken: 'Spoken languages', spanish: 'Spanish (native)', english: 'English B2', portuguese: 'Portuguese A2',
       contactKicker: '02 / Contact', connect: "Let's connect.", contactIntro: 'You can find me through these channels.', email: 'Email →',
-      externalNote: 'LinkedIn, GitHub and WhatsApp open in a new tab.', backTop: 'Back to top ↑',
+      externalNote: 'LinkedIn, GitHub and WhatsApp open in a new tab.',
       title: 'Gabriel Perotti — Software Engineer | Full Stack',
       description: 'Gabriel Perotti — Software Engineer and Full Stack Developer with over 20 years of experience. Skills, résumé and contact details.',
       socialDescription: 'Software development experience, technical skills, résumé and contact details.'
     },
     pt: {
+      bitoTitle: 'Assistente Bito', bitoChat: 'Converse com o Bito', bitoLoading: 'Carregando Bito…', bitoError: 'Não foi possível carregar o Bito. Tente novamente.', bitoRetry: 'Tentar novamente',
       profileHeading: 'perfil', skip: 'Pular para o conteúdo', navigation: 'Navegação principal', about: 'Sobre mim', skills: 'Habilidades', contact: 'Contato', language: 'Idioma',
       lightTheme: 'Tema claro', darkTheme: 'Tema escuro', themeLabel: 'Usar tema claro',
       eyebrow: 'Desenvolvimento de software · Full Stack', role: 'Engenheiro de Software | Full Stack',
@@ -26,12 +28,13 @@
       skillsIntro: 'Minhas principais habilidades técnicas e idiomas.', programming: 'Linguagens de programação', frameworks: 'Tecnologias / Frameworks',
       applications: 'Aplicações / Bancos de dados', spoken: 'Idiomas', spanish: 'Espanhol (nativo)', english: 'Inglês B2', portuguese: 'Português A2',
       contactKicker: '02 / Contato', connect: 'Vamos conversar.', contactIntro: 'Você pode me encontrar por estes canais.', email: 'E-mail →',
-      externalNote: 'LinkedIn, GitHub e WhatsApp abrem em uma nova aba.', backTop: 'Voltar ao topo ↑',
+      externalNote: 'LinkedIn, GitHub e WhatsApp abrem em uma nova aba.',
       title: 'Gabriel Perotti — Engenheiro de Software | Full Stack',
       description: 'Gabriel Perotti — Engenheiro de Software e Desenvolvedor Full Stack com mais de 20 anos de experiência. Habilidades, currículo e contato.',
       socialDescription: 'Experiência em desenvolvimento de software, habilidades técnicas, currículo e contato.'
     },
     es: {
+      bitoTitle: 'Asistente Bito', bitoChat: 'Conversá con Bito', bitoLoading: 'Cargando Bito…', bitoError: 'No se pudo cargar Bito. Inténtalo de nuevo.', bitoRetry: 'Reintentar',
       profileHeading: 'perfil', skip: 'Saltar al contenido', navigation: 'Navegación principal', about: 'Sobre mí', skills: 'Habilidades', contact: 'Contacto', language: 'Idioma',
       lightTheme: 'Tema claro', darkTheme: 'Tema oscuro', themeLabel: 'Usar tema claro',
       eyebrow: 'Desarrollo de software · Full Stack', role: 'Ingeniero de Software | Full Stack',
@@ -41,7 +44,7 @@
       skillsIntro: 'Mis principales habilidades técnicas e idiomas.', programming: 'Lenguajes de programación', frameworks: 'Tecnologías / Frameworks',
       applications: 'Aplicaciones / Bases de datos', spoken: 'Idiomas', spanish: 'Español (nativo)', english: 'Inglés B2', portuguese: 'Portugués A2',
       contactKicker: '02 / Contacto', connect: 'Conversemos.', contactIntro: 'Podés encontrarme por estos canales.', email: 'Correo →',
-      externalNote: 'LinkedIn, GitHub y WhatsApp se abren en una pestaña nueva.', backTop: 'Volver arriba ↑',
+      externalNote: 'LinkedIn, GitHub y WhatsApp se abren en una pestaña nueva.',
       title: 'Gabriel Perotti — Ingeniero de Software | Full Stack',
       description: 'Gabriel Perotti — Ingeniero de Software y Desarrollador Full Stack con más de 20 años de experiencia. Habilidades, currículum y contacto.',
       socialDescription: 'Experiencia en desarrollo de software, habilidades técnicas, currículum y contacto.'
@@ -54,7 +57,6 @@
   const languageButtons = [...languageOptions.querySelectorAll('[data-language]')];
   const picker = document.querySelector('.language-picker');
   const header = document.querySelector('.top');
-  const backTop = document.getElementById('back-top');
   let currentLanguage = 'en';
   function readPreference(key) {
     try { return localStorage.getItem(key); } catch { return null; }
@@ -82,6 +84,7 @@
     document.querySelector('meta[property="og:description"]').content = text.socialDescription;
     updateThemeButton();
     savePreference('gp-lang', currentLanguage);
+    document.dispatchEvent(new Event('portfolio:language'));
   }
   function setTheme(value) {
     root.dataset.theme = value === 'light' ? 'light' : 'dark';
@@ -136,16 +139,4 @@
   }
   updateHeaderHeight();
   new ResizeObserver(updateHeaderHeight).observe(header);
-  function updateBackTop() {
-    const visible = window.scrollY > 480;
-    if (!visible && document.activeElement === backTop) document.querySelector('.logo').focus({ preventScroll: true });
-    backTop.hidden = !visible;
-  }
-  window.addEventListener('scroll', updateBackTop, { passive: true });
-  backTop.addEventListener('click', event => {
-    event.preventDefault();
-    document.querySelector('.logo').focus({ preventScroll: true });
-    window.scrollTo({ top: 0 });
-  });
-  updateBackTop();
 })();

@@ -15,6 +15,7 @@
   <link rel="manifest" href="assets/favicon/site.webmanifest">
   <link rel="stylesheet" href="assets/css/portfolio.css">
   <script src="assets/js/portfolio.js" defer></script>
+  <script src="assets/js/bito.js" defer></script>
 </head>
 <body>
   <a class="skip-link" href="#main" data-i18n="skip">Skip to content</a>
@@ -94,6 +95,9 @@
     </section>
   </main>
   <footer><div class="wrap foot"><span>© Gabriel Perotti</span></div></footer>
-  <a class="back-top iconbtn" id="back-top" href="#about" aria-label="Back to top ↑" data-i18n-aria="backTop" hidden><span aria-hidden="true">↑</span></a>
+  <button class="bito-launcher" id="bito-launcher" type="button" aria-labelledby="bito-cta" aria-controls="bito-panel" aria-expanded="false" hidden><span class="bito-cta" id="bito-cta" data-i18n="bitoChat">Chat with Bito</span><img src="assets/images/bito.png" width="64" height="64" alt=""></button>
+  <aside class="bito-panel" id="bito-panel" aria-label="Bito assistant" data-i18n-aria="bitoTitle" tabindex="-1" hidden inert>
+    <div class="bito-feedback" id="bito-feedback" role="status"><p id="bito-loading" data-i18n="bitoLoading">Loading Bito…</p><p id="bito-error" data-i18n="bitoError" hidden>Bito could not load. Please try again.</p><button class="btn" id="bito-retry" type="button" data-i18n="bitoRetry" hidden>Try again</button></div>
+  </aside>
 </body>
 </html>

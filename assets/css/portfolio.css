@@ -44,7 +44,20 @@ nav a { display: inline-flex; align-items: center; min-height: 44px; padding-blo
 .language-options button span { color: var(--muted); font-size: .75rem; }
 .language-options button:hover, .language-options button[aria-pressed='true'] { background: var(--surface2); color: var(--accent); }
 .language-options button:focus-visible { outline-offset: -3px; }
-.back-top { position: fixed; right: 24px; bottom: 24px; z-index: 15; width: 48px; height: 48px; box-shadow: var(--shadow); font-size: 1.4rem; }
+.bito-launcher { position: fixed; right: 24px; bottom: 24px; z-index: 1000000; display: grid; place-items: center; width: 64px; height: 64px; padding: 3px; border: 2px solid #65c8fa; border-radius: 50%; background: #168ed0; box-shadow: 0 8px 28px #087cbd40, 0 0 0 5px #168ed014; transition: transform .18s ease, box-shadow .18s ease; }
+.bito-launcher img { width: 100%; height: 100%; object-fit: contain; border-radius: 50%; }
+.bito-launcher:hover { transform: translateY(-3px) scale(1.04); box-shadow: 0 12px 32px #087cbd55, 0 0 0 7px #168ed024; }
+.bito-launcher:active { transform: scale(.96); }
+.bito-launcher:focus-visible { outline-color: #65c8fa; }
+.bito-cta { position: absolute; right: calc(100% + 14px); padding: 9px 14px; border: 1px solid #65c8fa; border-radius: 12px; background: #0b3350; color: #fff; box-shadow: 0 6px 20px #087cbd26; font-size: .88rem; font-weight: 600; white-space: nowrap; opacity: 0; visibility: hidden; transform: translateX(5px); transition: opacity .18s ease, transform .18s ease, visibility .18s; }
+.bito-launcher:is(:hover, :focus-visible) .bito-cta { opacity: 1; visibility: visible; transform: none; }
+.bito-launcher[aria-expanded='true'] .bito-cta { visibility: hidden; opacity: 0; }
+.bito-panel, #assistant-saas-container { position: fixed !important; inset: auto 24px 104px auto !important; width: 400px !important; max-width: calc(100% - 48px) !important; height: min(640px, calc(100vh - 128px)) !important; height: min(640px, calc(100dvh - 128px)) !important; border-radius: 20px; overflow: hidden; transform: none !important; transform-origin: bottom right; animation: bito-enter .22s ease-out both; }
+.bito-panel { z-index: 999998; background: var(--surface); color: var(--text); border: 1px solid var(--line); box-shadow: var(--shadow); outline: none; }
+#assistant-saas-container { box-shadow: var(--shadow); }
+.bito-feedback { padding: 24px; }
+@keyframes bito-enter { from { opacity: 0; translate: 0 14px; scale: .94; } to { opacity: 1; translate: 0 0; scale: 1; } }
+@media (hover: none) { .bito-launcher .bito-cta { opacity: 1; visibility: visible; transform: none; } }
 .hero { display: grid; grid-template-columns: 1.25fr .9fr; align-items: center; gap: 56px; padding-block: 96px; }
 .hero > *, .skillgrid > * { min-width: 0; }
 .eyebrow, .section-kicker { color: var(--accent); font-weight: 700; letter-spacing: .12em; text-transform: uppercase; font-size: .76rem; }
@@ -95,7 +108,8 @@ footer { padding-block: 30px; color: var(--muted); border-top: 1px solid var(--l
   nav a { font-size: .78rem; padding-block: 6px; white-space: nowrap; }
   .preferences { gap: 6px; }
   .iconbtn { padding-inline: 10px; }
-  .back-top { right: 18px; bottom: 18px; }
+  .bito-launcher { right: 18px; bottom: 18px; }
+  .bito-panel, #assistant-saas-container { right: 18px !important; bottom: 98px !important; max-width: calc(100% - 36px) !important; height: min(640px, calc(100vh - 116px)) !important; height: min(640px, calc(100dvh - 116px)) !important; border-radius: 16px; }
   .hero { padding-block: 48px; }
   h1 { font-size: clamp(3.3rem, 16vw, 4.5rem); }
   .skillgrid { grid-template-columns: 1fr; }
@@ -103,6 +117,12 @@ footer { padding-block: 30px; color: var(--muted); border-top: 1px solid var(--l
   .panel { padding: 22px; }
   .contact-panel { padding-left: 20px; }
 }
+/* The remote header has a minimum content width; keep its controls visible on small phones. */
+@media (max-width: 340px) {
+  #assistant-saas-container iframe { width: 117.6471% !important; height: 117.6471% !important; transform: scale(.85); transform-origin: top left; }
+}
 @media (prefers-reduced-motion: reduce) {
+  .bito-panel, #assistant-saas-container { animation: none; scale: none; translate: none; }
+  .bito-launcher, .bito-launcher .bito-cta { transform: none !important; }
   *, *::before, *::after { scroll-behavior: auto !important; transition: none !important; }
 }
